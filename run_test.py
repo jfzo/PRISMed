@@ -6,11 +6,11 @@ from pymongo import MongoClient
 client = MongoClient()
 db = client.prism
 
+db.data.drop()
 db.anonymized_subject.drop()
 db.study.drop()
 db.source.drop()
 db.subject_capture.drop()
-
 
 
 #odm.connect('prism', host='192.168.99.100', port=32768) # for DOCKER
@@ -38,12 +38,27 @@ st1 = Study(title='Estudio numero 1', date_added=today, physiological_st='EEG').
 
 #Create capture for subject 1 in study 1
 sc1 = SubjectCapture(in_study=st1, subject=sbj1)
-#create all the data  within the capture 1:
-dt1 = Data(source=src1, datatype='Image', checksum='4dc8e0d8411fa6d4f105c1b68b1375d1', size=66, filename='image001.dcm', location='brain/image/eeg/'+str(st1.id)+'/subject/'+sc1.subject.SID)
-sc1.data.append(dt1)
-dt2 = Data(source=src1, datatype='Image', checksum='3ac8e0d8411fa1a4t105c1b68b1375t9', size=66, filename='image002.dcm', location='brain/image/eeg/'+str(st1.id)+'/subject/'+sc1.subject.SID)
-sc1.data.append(dt2)
 sc1.save()
+sc2 = SubjectCapture(in_study=st1, subject=sbj2)
+sc2.save()
+sc3 = SubjectCapture(in_study=st1, subject=sbj3)
+sc3.save()
+sc4 = SubjectCapture(in_study=st1, subject=sbj4)
+sc4.save()
+#create all the data  within the capture 1:
+dt = Data(source=src1, datatype='Image', checksum='4dc8e0d8411fa6d4f105c1b68b1375d1', size=66, filename='image001.dcm', location='brain/image/eeg/'+str(st1.id)+'/subject/'+sc1.subject.SID, parent_capture=sc1).save()
+#sc1.data.append(dt1)
+dt = Data(source=src1, datatype='Image', checksum='3ac8e0d8411fa1a4t105c1b68b1375t9', size=66, filename='image002.dcm', location='brain/image/eeg/'+str(st1.id)+'/subject/'+sc1.subject.SID, parent_capture=sc1).save()
+#sc1.data.append(dt2)
 
+dt = Data(source=src2, datatype='Image', checksum='9ac8e0d8411fa1p4t105c1b68b7375t9', size=66, filename='image001.dcm', location='brain/image/eeg/'+str(st1.id)+'/subject/'+sc2.subject.SID, parent_capture=sc2).save()
+
+
+dt = Data(source=src1, datatype='Image', checksum='4ac8e0d8411fa1o4t105c1b68b1375t9', size=66, filename='image001.dcm', location='brain/image/eeg/'+str(st1.id)+'/subject/'+sc3.subject.SID, parent_capture=sc3).save()
+
+dt = Data(source=src2, datatype='Image', checksum='1ac8e0d8411fa1l4t105c1b68b1375t9', size=66, filename='image002.dcm', location='brain/image/eeg/'+str(st1.id)+'/subject/'+sc3.subject.SID, parent_capture=sc3).save()
+
+
+dt = Data(source=src2, datatype='Image', checksum='3ac2e0d8411fanm4t105c1b68b1375t9', size=66, filename='image001.dcm', location='brain/image/eeg/'+str(st1.id)+'/subject/'+sc4.subject.SID, parent_capture=sc4).save()
 
 

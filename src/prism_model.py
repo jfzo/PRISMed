@@ -19,20 +19,7 @@ class Source(odm.Document):
     information = odm.StringField(max_length=100)
 
 
-class Data(odm.EmbeddedDocument):
-    annotations = odm.StringField(max_length=200)
-    location = odm.StringField(max_length=100, required=True)
-    filename = odm.StringField(max_length=50, required=True)
-    size = odm.IntField(required=True)
-    checksum = odm.StringField(required=True)
-    datatype = odm.StringField(choices=('Image','Signal'), max_length=20, required=True) #set by the inherited class.
-    source = odm.ReferenceField(Source, required=True)
 
-    #meta = {'allow_inheritance':True}
-    #meta = {'abstract':True}
-
-    #def associate_to_capture(self, c):
-    #    self.capture = c
 
 
 
@@ -46,19 +33,30 @@ class Study(odm.Document):
     def init(self, ):
         pass
 
-    def add_capture(self, c):
-        self.captures.append(c)
-
 class SubjectCapture(odm.Document):
     is_pacient = odm.BooleanField(default=False)
     in_study = odm.ReferenceField(Study, required=True)
-    data = odm.ListField(odm.EmbeddedDocumentField(Data), default=list)
     subject = odm.ReferenceField(AnonymizedSubject, required=True)
 
     def init(self, ):
         pass
 
 
+class Data(odm.Document):
+    annotations = odm.StringField(max_length=200)
+    location = odm.StringField(max_length=100, required=True)
+    filename = odm.StringField(max_length=50, required=True)
+    size = odm.IntField(required=True)
+    checksum = odm.StringField(required=True, unique=True)
+    datatype = odm.StringField(choices=('Image','Signal'), max_length=20, required=True) #set by the inherited class.
+    source = odm.ReferenceField(Source, required=True)
+    parent_capture = odm.ReferenceField(SubjectCapture, required=True)
+
+    #meta = {'allow_inheritance':True}
+    #meta = {'abstract':True}
+
+    #def associate_to_capture(self, c):
+    #    self.capture = c
 
 class User(odm.Document):
     pass
