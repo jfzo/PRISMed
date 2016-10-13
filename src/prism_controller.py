@@ -38,7 +38,7 @@ class PackageContent(object):
 
 class FrontController(WSRoot):
     '''
-    HOW TO USE THIS WSDL INTERFACE
+    --HOW TO USE THIS WSDL INTERFACE--
 
     import base64
     with open("<PATH_TO_THE_CAPTURE_ZIP_FILE>/Ax_FSPGR_3D_7.zip",'rb') as zip_file:
@@ -52,6 +52,15 @@ class FrontController(WSRoot):
     pc.content = encoded_string
     client.service.upload_packed_content( pc )
     '''
+    
+    captureController = SubjectCaptureUploadController = None
+    
+    def init(self):
+        if self.captureController == None:
+            self.captureController = SubjectCaptureUploadController()
+
+
+
     @expose(PackageContent)
     def create(self):
         p = PackageContent()
@@ -61,13 +70,16 @@ class FrontController(WSRoot):
 
     @expose()
     @validate(PackageContent)
-    def upload_packed_content(self, o):
+    def handle_capture_upload(self, o):
         logging.debug( "received "+o.filename )     
 
         with open(temp_dir+'/'+o.filename, "wb") as fh:
             fh.write(o.content.decode('base64'))
 
         # delegate the content processing to the corresponding controller.
+        self.init()
+        captureController.upload_packed_content(temp_dir+'/'+o.filename)
+
         return len(o.content)
 
 
