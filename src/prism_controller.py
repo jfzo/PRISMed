@@ -1,9 +1,8 @@
-import wsme
-from wsme import WSRoot
-from wsme.types import Enum, binary
-from wsme.types import UserType
-from wsme import WSRoot, expose, validate, signature
-
+#import wsme
+#from wsme.types import Enum, binary
+#from wsme.types import UserType
+from wsme import WSRoot, expose, validate
+import logging
 
 #CONFIGURATION DIRECTIVES
 ip_address='10.100.45.123'
@@ -15,9 +14,11 @@ class SubjectCaptureUploadController:
     def __init__(self):
         pass
 
-    def upload_packed_content(self, ):
+    def upload_packed_content(self, dir_path, file_name):
+        #process the file
+        logging.debug("File "+dir_path+"/"+file_name+" uploaded.")
         pass
-
+        
     def save_model(self, ):
         pass
 
@@ -39,18 +40,18 @@ class PackageContent(object):
 class FrontController(WSRoot):
     '''
     --HOW TO USE THIS WSDL INTERFACE--
-
+    from suds.client import Client
     import base64
-    with open("<PATH_TO_THE_CAPTURE_ZIP_FILE>/Ax_FSPGR_3D_7.zip",'rb') as zip_file:
+    with open("/Volumes/SSDII/Users/juan/Downloads/Ax_FSPGR_3D_7.zip",'rb') as zip_file:
         encoded_string = base64.b64encode(zip_file.read())
 
-    url = 'http://10.100.45.123:8080/ws/api.wsdl'
+    url = 'http://127.0.0.1:8080/prism/api.wsdl'
     client = Client(url, cache=None)
-    pc = client.service.create()
+    pc = client.service.newPackageContent()
 
     pc.filename = 'Ax_FSPGR_3D_7.zip'
     pc.content = encoded_string
-    client.service.upload_packed_content( pc )
+    client.service.handle_capture_upload( pc )
     '''
     
     captureController = SubjectCaptureUploadController = None
@@ -62,7 +63,7 @@ class FrontController(WSRoot):
 
 
     @expose(PackageContent)
-    def create(self):
+    def newPackageContent(self):
         p = PackageContent()
         p.filename = ''
         p.content = ''
@@ -78,7 +79,7 @@ class FrontController(WSRoot):
 
         # delegate the content processing to the corresponding controller.
         self.init()
-        captureController.upload_packed_content(temp_dir+'/'+o.filename)
+        self.captureController.upload_packed_content(temp_dir, o.filename)
 
         return len(o.content)
 
