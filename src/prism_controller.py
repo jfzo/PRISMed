@@ -2,12 +2,8 @@
 #from wsme.types import Enum, binary
 #from wsme.types import UserType
 from wsme import WSRoot, expose, validate
-import logging
+import prism_config as config
 
-#CONFIGURATION DIRECTIVES
-ip_address='10.100.45.123'
-bind_port='8080'
-temp_dir='/tmp'
 
 
 class SubjectCaptureUploadController:
@@ -54,7 +50,7 @@ class FrontController(WSRoot):
     client.service.handle_capture_upload( pc )
     '''
     
-    captureController = SubjectCaptureUploadController = None
+    captureController = SubjectCaptureUploadController
     
     def init(self):
         if self.captureController == None:
@@ -74,12 +70,12 @@ class FrontController(WSRoot):
     def handle_capture_upload(self, o):
         logging.debug( "received "+o.filename )     
 
-        with open(temp_dir+'/'+o.filename, "wb") as fh:
+        with open(config.temp_dir+'/'+o.filename, "wb") as fh:
             fh.write(o.content.decode('base64'))
 
         # delegate the content processing to the corresponding controller.
         self.init()
-        self.captureController.upload_packed_content(temp_dir, o.filename)
+        self.captureController.upload_packed_content(config.temp_dir, o.filename)
 
         return len(o.content)
 

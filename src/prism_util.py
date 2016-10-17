@@ -1,10 +1,57 @@
 import zipfile as zf
-
+import datetime
+import prism_config as config
+import os
+import assert
 
 class SubjectCaptureUnpacker:
     def __init__(self):
         pass
-    def unpack_study(self, p0):
-        pass
+
+    def unpack_study(self, dir_path, packed_filename):
+        packedContentPath = extract_to_temporary_dir(dir_path, packed_filename)
+        # open META.INFO and check content
+        metainfo = open(packedContentPath + os.separator + 'META.INFO')
+        pversion = int(metainfo.readline().strip())
+        studyid = int(metainfo.readline().strip().split(',')[1])
+        sbjid, sbjgender = metainfo.readline().strip().split(',')[-2:]
+        sbjid = int(sbjid)
+        is_pacient = False
+        if metainfo.readline().strip() == 'P':
+            is_pacient = True
+
+        assert( 'DATA:' == metainfo.readline().strip()) # DATA LINE
+        # check content
+        # ...
+
+        metainfo.close()
 
 
+
+
+    def extract_to_temporary_dir(self, dir_path, packed_filename):
+        '''
+        Extracts all files to a temporary directory and returns its full path
+        '''
+        filepath = dir_path + os.separator + packed_filename
+        packedFile = zf.ZipFile(filepath)
+        if 'META.INFO' not in packedFile.namelist():
+            logging.error("The file "+packed_filename+" is not well formed. META.INFO file is missing")
+            return none
+        fldname = config.temp_dir + os.separator + get_new_folder_name()
+        assert( not os.path.exists(fldname) )
+        os.makedirs( fldname )
+        logging.debug("Extracting files to directory "+fldname)
+        packedFile.extractall( fldname ) 
+        packedFile.close()
+        return fldname
+
+
+
+    def get_new_folder_name(self):
+        '''
+        Creates a new folder name based on current datetime.
+        '''
+        dt = datetime.datetime.now()
+        folder_name = '{0}{1}{2}_{3}{4}{5}_{6}'.format(dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second, dt.microsecond)
+        return folder_name
