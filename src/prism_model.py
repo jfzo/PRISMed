@@ -14,7 +14,7 @@ class AnonymizedSubject(odm.Document):
     gender = odm.StringField(max_length=50)
 
 
-class Source(odm.Document):
+class Modality(odm.EmbeddedDocument):
     name = odm.StringField(max_length=50,  required=True, unique=True)
     information = odm.StringField(max_length=100)
 
@@ -28,12 +28,14 @@ class Study(odm.Document):
     date_added = odm.DateTimeField(required=True)
     metadata = odm.StringField(max_length=100)
     physiological_st = odm.StringField(max_length=50, required=True)#eventually isolate
-    #captures = odm.ListField(odm.EmbeddedDocumentField(SubjectCapture), default=list)
+    data_type_in_study = odm.StringField(max_length=50, required=True)#eventually isolate
+    modalities = odm.ListField(odm.EmbeddedDocumentField(Modality), default=list)
+    #captures = odm.ListField(odm.EmbeddedDocumentField(SubjectDataInStudy), default=list)
 
     def init(self, ):
         pass
 
-class SubjectCapture(odm.Document):
+class SubjectDataInStudy(odm.Document):
     is_pacient = odm.BooleanField(default=False)
     in_study = odm.ReferenceField(Study, required=True)
     subject = odm.ReferenceField(AnonymizedSubject, required=True)
@@ -49,8 +51,7 @@ class Data(odm.Document):
     size = odm.IntField(required=True)
     checksum = odm.StringField(required=True, unique=True)
     datatype = odm.StringField(choices=('Image','Signal'), max_length=20, required=True) #set by the inherited class.
-    source = odm.ReferenceField(Source, required=True)
-    parent_capture = odm.ReferenceField(SubjectCapture, required=True)
+    parent_sdis = odm.ReferenceField(SubjectDataInStudy, required=True)
 
     #meta = {'allow_inheritance':True}
     #meta = {'abstract':True}
