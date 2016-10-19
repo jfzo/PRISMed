@@ -42,9 +42,6 @@ CREATE A SUBJECT AND A STUDY
 '''
 
 
-sbj = AnonymizedSubject(SID='c99ba9ec0203c87', gender='male').save()
-today = datetime.fromtimestamp(time.time())
-st1 = Study(title='Estudio numero 1', date_added=today, physiological_st='brain', data_type_in_study='Image', modalities=[src1]).save()
 
 '''
 CREATE A META.INFO WITH THE INFORMATION ABOVE AND PACK IT INTO A ZIP FILE

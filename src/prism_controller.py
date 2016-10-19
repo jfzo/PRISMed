@@ -9,6 +9,40 @@ import time
 from datetime import datetime
 import logging
 
+class PackageContent(object):
+    filename = unicode
+    content = unicode
+
+    def __repr__(self):
+        return "PackageContent(%s, %s)" % (
+            self.filename, self.content
+        )
+
+
+class RestStudy(object):
+    id = unicode
+    title = unicode
+    #date_added = unicode
+    metadata = unicode
+    physiological_st = unicode
+    data_type_in_study = unicode
+    modalities = unicode # comma separated list of strings
+
+    def __repr__(self):
+        return "RestStudy(%s, %s, %s, %s, %s, %s)" % (
+            self.id, self.title, self.metadata, self.physiological_st, self.data_type_in_study, self.modalities
+        )
+        
+class RestAnonymizedSubject(object):
+    SID = unicode
+    gender = unicode
+    
+    def __repr__(self):
+        return "RestAnonymizedSubject(%s, %s)" % (
+            self.SID, self.gender
+        )
+    
+            
 
 class SubjectCaptureUploadController:
     def __init__(self):
@@ -75,66 +109,37 @@ class StudyController:
         
     def store_study(self, s):
         #create model object, save and return id
-        today = datetime.fromtimestamp(time.time())
-        metadata = unicode
-        physiological_st = unicode
-        data_type_in_study = unicode
-        modalities = unicode # comma separated list of strings
-        
+        logging.debug("Creating Study object")
         mods = s.modalities.lower().split(',')
         lMods = []
         for m in mods:
             #search modality or create a new one
-            qmod = Modality.objects()
+            qmod = Modality.objects(name=m)
             if qmod.count() > 0:
                 lMods.append( qmod.first() )
             else:
                 newmod = Modality(name=m).save()
                 lMods.append( newmod )
+        logging.debug("...storing Study object")
+        today = datetime.fromtimestamp(time.time()) 
+        st = Study(title=s.title, date_added=today, metadata=s.metadata, physiological_st=s.physiological_st, data_type_in_study=s.data_type_in_study, modalities=lMods).save()
+        logging.debug("...id assigned "+str(st.id))
         
-        st = Study(title=s.title, date_added=today, metadata=s.metadata, physiological_st=s.physiological_st, 
-        data_type_in_study=s.data_type_in_study, modalities=lMods).save()
-        
-        return st.id
+        return str(st.id)
         
 class AnonymizedSubjectController:
-        
+    def __init__(self):
+        logging.debug("Initializing AnonymizedSubjectController")
+        config.connect()
+
+    def store_subject(self, o):
+        sbj = AnonymizedSubject(SID=o.SID, gender=o.gender).save()
+        return str(sbj.id)
+
             
 #### WSDL Service Interface
 
-class PackageContent(object):
-    filename = unicode
-    content = unicode
 
-    def __repr__(self):
-        return "PackageContent(%s, %s)" % (
-            self.filename, self.content
-        )
-
-
-class RestStudy:
-    title = unicode
-    #date_added = unicode
-    metadata = unicode
-    physiological_st = unicode
-    data_type_in_study = unicode
-    modalities = unicode # comma separated list of strings
-
-    def __repr__(self):
-        return "RestStudy(%s, %s, %s, %s, %s)" % (
-            self.title, self.metadata, self.physiological_st, self.data_type_in_study, self.modalities
-        )
-        
-class RestAnonymizedSubject:
-    SID = unicode
-    gender = unicode
-    
-    def __repr__(self):
-        return "RestAnonymizedSubject(%s, %s)" % (
-            self.SID, self.gender
-        )
-    
-            
 
 class FrontController(WSRoot):
     '''
@@ -178,12 +183,22 @@ class FrontController(WSRoot):
         s.modalities = ''
         return s
     
-    @expose()
+    @expose(RestStudy)
     @validate(RestStudy)
     def handle_save_study(self, o):
         logging.debug( "received new study"+o.title )
         self.init()
-        self.anonymizedSubjectController.store_study(o)
+        id = self.studyController.store_study(o)
+        o.id = id
+        return o
+
+
+    @expose(unicode,RestAnonymizedSubject)
+    @validate(RestAnonymizedSubject)
+    def handle_save_anonymizedsubject(self, o):
+        logging.debug( "received new anonymized subject"+o.SID )
+        self.init()
+        return self.anonymizedSubjectController.store_subject(o)
 
     @expose(RestAnonymizedSubject)
     def newRestAnonymizedSubject(self):
@@ -203,7 +218,7 @@ class FrontController(WSRoot):
 
 
 
-    @expose()
+    @expose(unicode, PackageContent)
     @validate(PackageContent)
     def handle_capture_upload(self, o):
         logging.debug( "received "+o.filename )     
@@ -216,7 +231,7 @@ class FrontController(WSRoot):
         self.init()
         self.captureController.upload_packed_content(config.temp_dir, o.filename)
 
-        return len(o.content)
+        return str(len(o.content))
 
 
 
