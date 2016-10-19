@@ -3,6 +3,7 @@
 from prism_controller import FrontController
 import bottle
 import logging
+import prism_config as config
 
 host_address = '127.0.0.1'
 root = FrontController(webpath='/prism')

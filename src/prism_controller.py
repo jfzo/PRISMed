@@ -4,6 +4,9 @@
 from wsme import WSRoot, expose, validate
 import prism_config as config
 from prism_util import SubjectCaptureUnpacker
+from prism_model import *
+import time
+from datetime import datetime
 import logging
 
 
@@ -64,6 +67,39 @@ class SubjectCaptureUploadController:
                 for chunk in iter(lambda: f.read(4096), b""):
                     hash_md5.update(chunk)
             return hash_md5.hexdigest()
+            
+class StudyController:
+    def __init__(self):
+        logging.debug("Initializing SubjectCaptureUploadController")
+        config.connect()
+        
+    def store_study(self, s):
+        #create model object, save and return id
+        today = datetime.fromtimestamp(time.time())
+        metadata = unicode
+        physiological_st = unicode
+        data_type_in_study = unicode
+        modalities = unicode # comma separated list of strings
+        
+        mods = s.modalities.lower().split(',')
+        lMods = []
+        for m in mods:
+            #search modality or create a new one
+            qmod = Modality.objects()
+            if qmod.count() > 0:
+                lMods.append( qmod.first() )
+            else:
+                newmod = Modality(name=m).save()
+                lMods.append( newmod )
+        
+        st = Study(title=s.title, date_added=today, metadata=s.metadata, physiological_st=s.physiological_st, 
+        data_type_in_study=s.data_type_in_study, modalities=lMods).save()
+        
+        return st.id
+        
+class AnonymizedSubjectController:
+        
+            
 #### WSDL Service Interface
 
 class PackageContent(object):
@@ -76,6 +112,29 @@ class PackageContent(object):
         )
 
 
+class RestStudy:
+    title = unicode
+    #date_added = unicode
+    metadata = unicode
+    physiological_st = unicode
+    data_type_in_study = unicode
+    modalities = unicode # comma separated list of strings
+
+    def __repr__(self):
+        return "RestStudy(%s, %s, %s, %s, %s)" % (
+            self.title, self.metadata, self.physiological_st, self.data_type_in_study, self.modalities
+        )
+        
+class RestAnonymizedSubject:
+    SID = unicode
+    gender = unicode
+    
+    def __repr__(self):
+        return "RestAnonymizedSubject(%s, %s)" % (
+            self.SID, self.gender
+        )
+    
+            
 
 class FrontController(WSRoot):
     '''
@@ -95,11 +154,43 @@ class FrontController(WSRoot):
     '''
     
     captureController = None
+    studyController = None
+    anonymizedSubjectController = None
     
     def init(self):
         if self.captureController == None:
             logging.debug('Creating subjectCaptureController')
             self.captureController = SubjectCaptureUploadController()
+            logging.debug('Creating studyController')
+            self.studyController = StudyController()
+            logging.debug('Creating anonymizedSubjectController')
+            self.anonymizedSubjectController = AnonymizedSubjectController()
+
+
+    @expose(RestStudy)
+    def newStudy(self):
+        s = RestStudy()
+        s.title = ''
+        s.date_added = ''
+        s.metadata = ''
+        s.physiological_st = ''
+        s.data_type_in_study = ''
+        s.modalities = ''
+        return s
+    
+    @expose()
+    @validate(RestStudy)
+    def handle_save_study(self, o):
+        logging.debug( "received new study"+o.title )
+        self.init()
+        self.anonymizedSubjectController.store_study(o)
+
+    @expose(RestAnonymizedSubject)
+    def newRestAnonymizedSubject(self):
+        aSub = RestAnonymizedSubject()
+        aSub.SID = ''
+        aSub.gender = ''
+        return aSub
 
 
 
@@ -109,6 +200,8 @@ class FrontController(WSRoot):
         p.filename = ''
         p.content = ''
         return p
+
+
 
     @expose()
     @validate(PackageContent)

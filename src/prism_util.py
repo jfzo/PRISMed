@@ -8,7 +8,7 @@ import logging
 
 class SubjectCaptureUnpacker:
     def __init__(self):
-        odm.connect('prism')
+        config.connect()
 
     def unpack_study(self, dir_path, packed_filename):
         '''
