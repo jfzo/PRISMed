@@ -23,6 +23,9 @@ class SubjectCaptureUnpacker:
         pversion = metainfo.readline().strip()
         studyid = metainfo.readline().strip().split(',')[1]
         sbjid = metainfo.readline().strip().split(',')[1]
+        
+        logging.debug("Locating study with "+studyid+" with subject "+sbjid)
+        
         is_pacient = False
         if metainfo.readline().strip() == 'P':
             is_pacient = True
@@ -39,7 +42,7 @@ class SubjectCaptureUnpacker:
             if not os.path.exists(packedContentPath + os.sep + fpath + os.sep + fname):
                 lNotFound.append( fname )
             else:
-                lData.append( (ftype, fname) )
+                lData.append( (ftype, fsize, fname) )
 
         assert( len(lNotFound) == 0 ) #check that all files were added.
         metainfo.close()
@@ -55,10 +58,10 @@ class SubjectCaptureUnpacker:
         assert( sbj.count() > 0)
         sbj = sbj.first()
         # create capture and data objects
-        sc = SubjectDataInStudy(in_study=st, subject=sbj)
+        sc = SubjectDataInStudy(in_study=st, subject=sbj, is_pacient=is_pacient)
         lDataObjs = []
-        for dtype, dname in lData:
-            dt = Data(datatype=dtype, filename=dname)
+        for dtype, dsize, dname in lData:
+            dt = Data(datatype=dtype, filename=dname, size=dsize)
             lDataObjs.append( dt )
         # returns the Study obj, AnonymizedSubject obj, Capture obj, a list with Data objs and the full path where the package were extracted.
         return st, sbj, sc, lDataObjs, packedContentPath

@@ -2,12 +2,17 @@
 import logging
 import mongoengine as odm
 
+# mongo
+mongo_ip_address='192.168.99.100'
+mongo_port=32768
+
+# app
+bind_port=8080
+bind_address='127.0.0.1'
 version=1.0
-ip_address='10.100.45.123'
-bind_port='8080'
 temp_dir='/tmp'
 data_dir='/tmp/prism_root'
 
 def connect():
-    odm.connect('prism')
-    #odm.connect('prism', host='192.168.99.100', port=32768)
+    #odm.connect('prism')
+    odm.connect('prism', host=mongo_ip_address, port=mongo_port)

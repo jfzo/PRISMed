@@ -10,7 +10,7 @@ import mongoengine as odm
 
 
 class AnonymizedSubject(odm.Document):
-    SID = odm.StringField(max_length=20,  required=True, unique=True)
+    SID = odm.StringField(max_length=100,  required=True, unique=True)
     gender = odm.StringField(max_length=50)
 
 
@@ -46,11 +46,11 @@ class SubjectDataInStudy(odm.Document):
 
 class Data(odm.Document):
     annotations = odm.StringField(max_length=200)
-    location = odm.StringField(max_length=100, required=True)
+    location = odm.StringField(max_length=500, required=True)
     filename = odm.StringField(max_length=50, required=True)
     size = odm.IntField(required=True)
     checksum = odm.StringField(required=True, unique=True)
-    datatype = odm.StringField(choices=('Image','Signal'), max_length=20, required=True) #set by the inherited class.
+    datatype = odm.StringField(choices=('image','signal'), max_length=20, required=True) #set by the inherited class.
     parent_sdis = odm.ReferenceField(SubjectDataInStudy, required=True)
 
     #meta = {'allow_inheritance':True}

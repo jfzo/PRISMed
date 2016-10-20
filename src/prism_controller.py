@@ -1,6 +1,7 @@
 #import wsme
 #from wsme.types import Enum, binary
 #from wsme.types import UserType
+import os
 from wsme import WSRoot, expose, validate
 import prism_config as config
 from prism_util import SubjectCaptureUnpacker
@@ -8,8 +9,10 @@ from prism_model import *
 import time
 from datetime import datetime
 import logging
+import hashlib
 
 class PackageContent(object):
+    id = unicode
     filename = unicode
     content = unicode
 
@@ -34,12 +37,13 @@ class RestStudy(object):
         )
         
 class RestAnonymizedSubject(object):
+    id = unicode
     SID = unicode
     gender = unicode
     
     def __repr__(self):
-        return "RestAnonymizedSubject(%s, %s)" % (
-            self.SID, self.gender
+        return "RestAnonymizedSubject(%s, %s, %s)" % (
+            self.id, self.SID, self.gender
         )
     
             
@@ -57,17 +61,25 @@ class SubjectCaptureUploadController:
 
         logging.debug("Identifying repository path")
         # store data files... path is formed by 
-        locpath = st.physiological_st + os.sep + st.data_type_in_study + os.sep
+        locpath = config.data_dir + os.sep + st.physiological_st 
+        if not os.path.exists(locpath):
+            os.makedirs(locpath)
+        
+        locpath += os.sep + st.data_type_in_study
+        if not os.path.exists(locpath):
+            os.makedirs(locpath)
+        
         modalities = []
         for m in st.modalities:
             modalities.append( m.name )
         modalities.sort()
-        locpath += '+'.join( modalities ) + os.sep + str(st.id) + os.sep
+        
+        locpath += os.sep + '+'.join( modalities ) + os.sep + str(st.id) + os.sep
         #check study directory
         if not os.path.exists(locpath):
             os.makedirs(locpath)
 
-        if sbj.is_pacient:
+        if sdis.is_pacient:
             locpath += 'pacient' 
         else:
             locpath += 'subject'
@@ -85,22 +97,29 @@ class SubjectCaptureUploadController:
         # 
         # store SubjectDataInStudy and
         sdis.save()
+        logging.debug("New SubjectDataInCapture stored ("+str(sdis.id)+")")
         # Data objects into DB and move the data
         for d in lDataObjs: # this block can easily be parallelized
+            #logging.debug( "-_------>>" )
+            #logging.debug( d )
             d.parent_sdis = sdis
             d.location = locpath
             # move file packedContentPath/filename to d.location/d.filename
-            os.rename(packedContentPath + os.sep + filename, config.data_dir + os.sep + d.location + os.sep + d.filename) 
-            d.checksum = mf5(config.data_dir + os.sep + d.location + os.sep + d.filename)
+            from_path = packedContentPath + os.sep + 'DATA' + os.sep + d.filename
+            dest_path = d.location + os.sep + d.filename
+            #logging.debug("Moving from "+ from_path +" to "+ dest_path)
+            os.rename(from_path, dest_path) 
+            d.checksum = self.md5(dest_path)
             d.save()
+        return str(sdis.id)
 
 
-        def md5(self, fname):
-            hash_md5 = hashlib.md5()
-            with open(fname, "rb") as f:
-                for chunk in iter(lambda: f.read(4096), b""):
-                    hash_md5.update(chunk)
-            return hash_md5.hexdigest()
+    def md5(self, fname):
+        hash_md5 = hashlib.md5()
+        with open(fname, "rb") as f:
+            for chunk in iter(lambda: f.read(4096), b""):
+                hash_md5.update(chunk)
+        return hash_md5.hexdigest()
             
 class StudyController:
     def __init__(self):
@@ -171,7 +190,7 @@ class FrontController(WSRoot):
             logging.debug('Creating anonymizedSubjectController')
             self.anonymizedSubjectController = AnonymizedSubjectController()
 
-
+    '''
     @expose(RestStudy)
     def newStudy(self):
         s = RestStudy()
@@ -182,7 +201,8 @@ class FrontController(WSRoot):
         s.data_type_in_study = ''
         s.modalities = ''
         return s
-    
+    '''
+            
     @expose(RestStudy)
     @validate(RestStudy)
     def handle_save_study(self, o):
@@ -193,20 +213,23 @@ class FrontController(WSRoot):
         return o
 
 
-    @expose(unicode,RestAnonymizedSubject)
+    @expose(RestAnonymizedSubject)
     @validate(RestAnonymizedSubject)
-    def handle_save_anonymizedsubject(self, o):
+    def handle_save_anonymizedSubject(self, o):
         logging.debug( "received new anonymized subject"+o.SID )
         self.init()
-        return self.anonymizedSubjectController.store_subject(o)
+        id = self.anonymizedSubjectController.store_subject(o)
+        o.id = id
+        return o
 
+    '''
     @expose(RestAnonymizedSubject)
     def newRestAnonymizedSubject(self):
         aSub = RestAnonymizedSubject()
         aSub.SID = ''
         aSub.gender = ''
         return aSub
-
+    '''
 
 
     @expose(PackageContent)
@@ -218,7 +241,7 @@ class FrontController(WSRoot):
 
 
 
-    @expose(unicode, PackageContent)
+    @expose(PackageContent)
     @validate(PackageContent)
     def handle_capture_upload(self, o):
         logging.debug( "received "+o.filename )     
@@ -226,12 +249,14 @@ class FrontController(WSRoot):
         with open(config.temp_dir+'/'+o.filename, "wb") as fh:
             fh.write(o.content.decode('base64'))
 
+            o.content = '' # empty because it can be huge on the response.
         # delegate the content processing to the corresponding controller.
         logging.debug("HANDLE_CAPTURE_UPLOAD")
         self.init()
-        self.captureController.upload_packed_content(config.temp_dir, o.filename)
-
-        return str(len(o.content))
+        id = self.captureController.upload_packed_content(config.temp_dir, o.filename)
+        logging.debug("Successful upload ("+id+")")
+        o.id = id
+        return o
 
 
 
