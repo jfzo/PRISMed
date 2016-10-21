@@ -3,8 +3,10 @@ import logging
 import mongoengine as odm
 
 # mongo
-mongo_ip_address='192.168.99.100'
-mongo_port=32768
+#mongo_ip_address='192.168.99.100'
+#mongo_port=32768
+mongo_ip_address='127.0.0.1'
+mongo_port=27017
 
 # app
 bind_port=8080

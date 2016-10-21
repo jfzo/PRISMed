@@ -2,7 +2,7 @@
 #from wsme.types import Enum, binary
 #from wsme.types import UserType
 import os
-from wsme import WSRoot, expose, validate
+from wsme import WSRoot, expose, validate, signature
 import prism_config as config
 from prism_util import SubjectCaptureUnpacker
 from prism_model import *
@@ -126,6 +126,22 @@ class StudyController:
         logging.debug("Initializing SubjectCaptureUploadController")
         config.connect()
         
+    def search_study_by_title(self, titleq):
+        logging.debug("Searching for all the studies matching title "+titleq)
+        results = Study.objects(title__icontains=titleq)
+        lResult = []
+        for s in results:
+            news = RestStudy()
+            news.id = str(s.id)
+            news.title = s.title
+            #news.date_added = 
+            news.metadata = s.metadata
+            news.physiological_st = s.physiological_st
+            news.data_type_in_study = s.data_type_in_study
+            news.modalities = '/'.join( x.name for x in s.modalities)
+            lResult.append( news )
+        return lResult
+
     def store_study(self, s):
         #create model object, save and return id
         logging.debug("Creating Study object")
@@ -202,6 +218,14 @@ class FrontController(WSRoot):
         s.modalities = ''
         return s
     '''
+
+    #@expose([RestStudy])
+    #@validate([RestStudy])
+    @signature([RestStudy], unicode)
+    def handle_search_study_by_title(self, title):
+        logging.debug( "Querying db for studies matching "+title )
+        self.init()
+        return self.studyController.search_study_by_title(title)
             
     @expose(RestStudy)
     @validate(RestStudy)

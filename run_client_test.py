@@ -63,8 +63,8 @@ subject_id = asub.SID
 CREATE A META.INFO WITH THE INFORMATION ABOVE AND PACK IT INTO A ZIP FILE
 '''
 is_pacient=False
-#data_source_dir="/home/juan/Descargas/Ax_FSPGR_3D_7/DATA/"
-data_source_dir="/Volumes/SSDII/Users/juan/Downloads/Ax_FSPGR_3D_7/DATA"
+data_source_dir="/home/juan/Descargas/Ax_FSPGR_3D_7/DATA/"
+#data_source_dir="/Volumes/SSDII/Users/juan/Downloads/Ax_FSPGR_3D_7/DATA"
 
 package_fname="Ax_FSPGR_3D_7.zip"
 # get all the data inside
