@@ -18,11 +18,6 @@ class Modality(odm.Document):
     name = odm.StringField(max_length=50,  required=True, unique=True)
     information = odm.StringField(max_length=100)
 
-
-
-
-
-
 class Study(odm.Document):
     title = odm.StringField(max_length=50, required=True)
     date_added = odm.DateTimeField(required=True)

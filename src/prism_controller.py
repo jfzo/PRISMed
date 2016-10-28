@@ -45,12 +45,41 @@ class RestAnonymizedSubject(object):
         return "RestAnonymizedSubject(%s, %s, %s)" % (
             self.id, self.SID, self.gender
         )
-    
+ 
+class RestSDIS(object):
+    id = unicode
+    is_pacient = bool
+    #in_study = unicode
+    subject = unicode #SID
+     
+    def __repr__(self):
+        return "RestAnonymizedSubject(%s, %s, %s)" % (
+            self.id, self.is_pacient,  self.subject
+        )
             
+class RestData(object):
+    id = unicode
+    location = unicode
+    filename = unicode
+    size = int
+    checksum = unicode
+    datatype = unicode
 
-class SubjectCaptureUploadController:
+    def __repr__(self):
+        return "RestData(%s,%s,%s,%s,%s,%s)" % (
+            self.id, self.location, self.filename, self.size, 
+            self.checksum, self.datatype
+        )
+
+
+
+
+######################
+
+#TODO: Change to SdisUploadController
+class SDISController:
     def __init__(self):
-        logging.debug("Initializing SubjectCaptureUploadController")
+        logging.debug("Initializing SDISController")
 
 
     def upload_packed_content(self, dir_path, file_name):
@@ -113,6 +142,34 @@ class SubjectCaptureUploadController:
             d.save()
         return str(sdis.id)
 
+    def get_SDIS_by_study(self, id):
+        logging.debug("Searching for all the SDIS associated to study "+id)
+        s = Study.objects(id=id)
+
+        results = SubjectDataInStudy.objects(in_study=s.first().id)
+        
+        logging.debug("#results found:"+str(len(results)))
+        #response = [(i.subject.SID, i.is_pacient) for i in results]
+        response = []
+        for i in results:
+            o = RestSDIS()
+            o.id = str(i.id)
+            o.subject = i.subject.SID
+            o.is_pacient = i.is_pacient
+            response.append( o )
+        return response
+
+    def get_SDIS(self, id):
+        results = SubjectDataInStudy.objects(id=id)
+        
+        response = []
+        for i in results:
+            o = RestSDIS()
+            o.id = str(i.id)
+            o.subject = i.subject.SID
+            o.is_pacient = i.is_pacient
+            response.append( o )
+        return response[0]
 
     def md5(self, fname):
         hash_md5 = hashlib.md5()
@@ -120,14 +177,32 @@ class SubjectCaptureUploadController:
             for chunk in iter(lambda: f.read(4096), b""):
                 hash_md5.update(chunk)
         return hash_md5.hexdigest()
+
+    def get_data_in_sdis(self, id):
+        logging.debug("Searching for all the data in SDIS with id "+id)
+        results = Data.objects(parent_sdis=id)
+        logging.debug("#results found:"+str(len(results)))
+        #response = [(i.subject.SID, i.is_pacient) for i in results]
+        response = []
+        for i in results:
+            o = RestData()
+            o.id = str(i.id)
+            o.location = i.location
+            o.filename = i.filename
+            o.size = i.size
+            o.checksum = i.checksum
+            o.datatype = i.datatype
+            response.append( o )
+        return response
+
             
 class StudyController:
     def __init__(self):
-        logging.debug("Initializing SubjectCaptureUploadController")
+        logging.debug("Initializing StudyController")
         config.connect()
         
     def search_study_by_title(self, titleq):
-        logging.debug("Searching for all the studies matching title "+titleq)
+        logging.debug("Searching for all the studies matching title: "+titleq)
         results = Study.objects(title__icontains=titleq)
         lResult = []
         for s in results:
@@ -141,6 +216,8 @@ class StudyController:
             news.modalities = '/'.join( x.name for x in s.modalities)
             lResult.append( news )
         return lResult
+
+
 
     def store_study(self, s):
         #create model object, save and return id
@@ -171,6 +248,20 @@ class AnonymizedSubjectController:
         sbj = AnonymizedSubject(SID=o.SID, gender=o.gender).save()
         return str(sbj.id)
 
+    def get_subject(self, sid):
+        sbj = AnonymizedSubject.objects(SID=sid)
+        o = RestAnonymizedSubject()
+        if sbj.count() > 0:
+            o.id = str(sbj.first().id)
+            o.SID = sbj.first().SID
+            o.gender = sbj.first().gender
+
+        return o
+            
+            
+        
+        
+        
             
 #### WSDL Service Interface
 
@@ -193,14 +284,14 @@ class FrontController(WSRoot):
     client.service.handle_capture_upload( pc )
     '''
     
-    captureController = None
+    sdisController = None
     studyController = None
     anonymizedSubjectController = None
     
     def init(self):
-        if self.captureController == None:
-            logging.debug('Creating subjectCaptureController')
-            self.captureController = SubjectCaptureUploadController()
+        if self.sdisController == None:
+            logging.debug('Creating sdisController')
+            self.sdisController = SDISController()
             logging.debug('Creating studyController')
             self.studyController = StudyController()
             logging.debug('Creating anonymizedSubjectController')
@@ -246,14 +337,31 @@ class FrontController(WSRoot):
         o.id = id
         return o
 
-    '''
-    @expose(RestAnonymizedSubject)
-    def newRestAnonymizedSubject(self):
-        aSub = RestAnonymizedSubject()
-        aSub.SID = ''
-        aSub.gender = ''
-        return aSub
-    '''
+    @signature(RestAnonymizedSubject, unicode)
+    def handle_get_anonymized_subject(self, sid):
+        self.init()
+        return self.anonymizedSubjectController.get_subject(sid)
+
+    @signature(RestSDIS, unicode)
+    def handle_get_SDIS(self, sdisid):
+        logging.debug( "Querying db for sdis with id "+ sdisid)
+        self.init()
+        return self.sdisController.get_SDIS(sdisid)
+
+    @signature([RestSDIS], unicode)
+    def handle_get_SDIS_by_study(self, studyid):
+        logging.debug( "Querying db for studies matching "+ studyid)
+        self.init()
+        return self.sdisController.get_SDIS_by_study(studyid)
+
+    @signature([RestData], unicode)
+    def handle_get_data_by_sdis(self, sdisid):
+        logging.debug( "Querying db for data in sdis with id "+ sdisid)
+        self.init()
+        return self.sdisController.get_data_in_sdis(sdisid)
+    
+
+
 
 
     @expose(PackageContent)
@@ -275,9 +383,8 @@ class FrontController(WSRoot):
 
             o.content = '' # empty because it can be huge on the response.
         # delegate the content processing to the corresponding controller.
-        logging.debug("HANDLE_CAPTURE_UPLOAD")
         self.init()
-        id = self.captureController.upload_packed_content(config.temp_dir, o.filename)
+        id = self.sdisController.upload_packed_content(config.temp_dir, o.filename)
         logging.debug("Successful upload ("+id+")")
         o.id = id
         return o

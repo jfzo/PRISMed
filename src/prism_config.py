@@ -10,10 +10,10 @@ mongo_port=27017
 
 # app
 bind_port=8080
-bind_address='127.0.0.1'
+bind_address='10.0.2.15'
 version=1.0
 temp_dir='/tmp'
-data_dir='/tmp/prism_root'
+data_dir='/home/juan/prism_root'
 
 def connect():
     #odm.connect('prism')

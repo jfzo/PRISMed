@@ -27,7 +27,7 @@
      <enum>QLayout::SetNoConstraint</enum>
     </property>
     <item row="0" column="2">
-     <widget class="QPushButton" name="pushButton">
+     <widget class="QPushButton" name="btnSearchStudies">
       <property name="text">
        <string>Buscar</string>
       </property>
@@ -56,34 +56,19 @@
    </property>
    <layout class="QGridLayout" name="gridLayout_2">
     <item row="1" column="0">
-     <widget class="QListWidget" name="listWidget">
+     <widget class="QListWidget" name="listStudy">
       <property name="enabled">
-       <bool>false</bool>
+       <bool>true</bool>
       </property>
-      <item>
-       <property name="text">
-        <string>item A</string>
-       </property>
-      </item>
-      <item>
-       <property name="text">
-        <string>item B</string>
-       </property>
-      </item>
-      <item>
-       <property name="text">
-        <string>item C</string>
-       </property>
-      </item>
      </widget>
     </item>
     <item row="1" column="1">
-     <widget class="QPushButton" name="pushButton_2">
+     <widget class="QPushButton" name="btnGetSDIS">
       <property name="enabled">
        <bool>false</bool>
       </property>
       <property name="text">
-       <string>Revisar estudio</string>
+       <string>Listar registros</string>
       </property>
      </widget>
     </item>
@@ -113,7 +98,7 @@
    </property>
    <layout class="QGridLayout" name="gridLayout_3">
     <item row="0" column="0">
-     <widget class="QListWidget" name="listWidget_2"/>
+     <widget class="QListWidget" name="listSDIS"/>
     </item>
    </layout>
   </widget>
@@ -122,12 +107,12 @@
     <rect>
      <x>20</x>
      <y>330</y>
-     <width>211</width>
+     <width>331</width>
      <height>20</height>
     </rect>
    </property>
    <property name="text">
-    <string>Capturas en estudio seleccionado</string>
+    <string>Registros de sujetos en estudio seleccionado</string>
    </property>
   </widget>
   <widget class="QWidget" name="verticalLayoutWidget">
@@ -135,20 +120,23 @@
     <rect>
      <x>520</x>
      <y>360</y>
-     <width>161</width>
+     <width>176</width>
      <height>111</height>
     </rect>
    </property>
    <layout class="QVBoxLayout" name="verticalLayout_2">
     <item>
-     <widget class="QPushButton" name="pushButton_3">
+     <widget class="QPushButton" name="btnNewSDIS">
       <property name="text">
-       <string>Nueva captura</string>
+       <string>Nuevo registro de sujeto</string>
       </property>
      </widget>
     </item>
     <item>
      <widget class="QPushButton" name="pushButton_4">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
       <property name="text">
        <string>Agregar a la captura</string>
       </property>
