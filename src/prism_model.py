@@ -14,6 +14,10 @@ class AnonymizedSubject(odm.Document):
     gender = odm.StringField(max_length=50)
 
 
+class PhysiologicalStructure(odm.Document):
+    name = odm.StringField(max_length=50,  required=True, unique=True)
+
+    
 class Modality(odm.Document):
     name = odm.StringField(max_length=50,  required=True, unique=True)
     information = odm.StringField(max_length=100)
@@ -21,8 +25,8 @@ class Modality(odm.Document):
 class Study(odm.Document):
     title = odm.StringField(max_length=50, required=True)
     date_added = odm.DateTimeField(required=True)
-    metadata = odm.StringField(max_length=100)
-    physiological_st = odm.StringField(max_length=50, required=True)#eventually isolate
+    metadata = odm.StringField(max_length=100)    
+    physiological_st = odm.ReferenceField(PhysiologicalStructure)
     data_type_in_study = odm.StringField(max_length=50, required=True)#eventually isolate
     modalities = odm.ListField(odm.ReferenceField(Modality), default=list)
     #captures = odm.ListField(odm.EmbeddedDocumentField(SubjectDataInStudy), default=list)

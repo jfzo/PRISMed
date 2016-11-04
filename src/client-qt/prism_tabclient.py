@@ -12,13 +12,15 @@ from suds import TypeNotFound
 import base64
 
 from prism_model import *
-import prism_config as config
+#import prism_config as config
 import time
 from datetime import datetime
 from pymongo import MongoClient
 import zipfile
 
-class tabdemo(QTabWidget):
+import logging
+
+class PRISMTabClient(QTabWidget):
     client = None
     lResultStudies = None #used to keep the returned results.
     lResultSDIS = None #used to keep the returned results.
@@ -27,36 +29,158 @@ class tabdemo(QTabWidget):
 
 
     def __init__(self, parent = None):  
+
+        super(PRISMTabClient, self).__init__(parent)
+
+        self.bind_address = ""
+        self.bind_port = ""
+        self.client = None
+        self.connected_ok = False
+        
+        self.tab_connection = QWidget()
+        self.tab_new_study = QWidget()
+        self.tab_search_study = QWidget()
+        self.tab_sdis = QWidget()
+        self.tab_load_data = QWidget()
+        
+          
+        self.addTab(self.tab_connection,"Conexion al servidor")
+        self.index_tab_connection = 0
+        
+        self.addTab(self.tab_new_study,"Nuevo estudio")
+        self.index_tab_new_study = 1    
+        self.tab_new_study.setDisabled(True)
+        
+        self.addTab(self.tab_search_study,"Buscar estudios")
+        self.index_tab_search_study = 2
+        self.tab_search_study.setDisabled(True)
+        
+        self.addTab(self.tab_sdis,"Sujeto en estudio")
+        self.index_tab_sdis = 3
+        self.tab_sdis.setDisabled(True)
+        
+        self.addTab(self.tab_load_data,"Carga de datos")
+        self.index_tab_load_data = 4
+        self.tab_load_data.setDisabled(True)
+        ##
+        self.draw_tab_connection()
+        self.draw_tab_new_study()
+        self.draw_tab_search_study()
+        self.draw_tab_sdis()
+        self.draw_tab_load_data()
+        self.setWindowTitle("Cliente PRISM vAlfa")
+		
+        self.connect(self, SIGNAL('currentChanged(int)'), self.selector)
+        
+    def selector(self, selected_index):
+        if self.connected_ok:
+            if selected_index == self.index_tab_connection:
+                logging.debug("Se selecciono la primera")
+            elif selected_index == self.index_tab_new_study:
+                logging.debug("Se selecciono la segunda")
+                self.update_modality_list()
+            elif selected_index == self.index_tab_search_study:
+                logging.debug("Se selecciono la tercera")
+            elif selected_index == self.index_tab_sdis:
+                logging.debug("Se selecciono la cuarta")
+            elif selected_index == self.index_tab_load_data:
+                logging.debug("Se selecciono la quinta")
+ 
+            
+        
+    def connect_to_server(self):
         '''
         CONNECT TO THE SERVER
         '''
-        url = 'http://'+config.bind_address+':'+str(config.bind_port)+'/prism/api.wsdl'
+        self.connected_ok = False
+        self.bind_address = str(self.lnEdtServerAddress.text())
+        self.bind_port = str(self.lnEdtServerPort.text())
+        
+        url = 'http://'+self.bind_address+':'+str(self.bind_port)+'/prism/api.wsdl'
+        logging.debug("Connecting to URL:"+ url)
         try:
             self.client = Client(url, cache=None)
+            self.connected_ok = True
         except TypeNotFound:
             self.client = Client(url, cache=None)
+            self.connected_ok = True
+        except URLError:
+            logging.error("Error al conectar")
 
-        super(tabdemo, self).__init__(parent)
+        if self.connected_ok:
+            self.btnServerConnect.setDisabled(True)
+            
+            self.tab_new_study.setDisabled(False)
+            self.tab_search_study.setDisabled(False)
+            self.tab_sdis.setDisabled(False)
+            self.tab_load_data.setDisabled(False)
 
-
-        self.tab1 = QWidget()
-        self.tab2 = QWidget()
-        self.tab3 = QWidget()
-          
-        self.addTab(self.tab1,"Tab 1")
-        self.addTab(self.tab2,"Tab 2")
-        self.addTab(self.tab3,"Tab 3")
-        self.tab1UI()
-        self.tab2UI()
-        self.tab3UI()
-        self.setWindowTitle("Cliente PRISM vAlfa")
-		
-    def tab1UI(self):
+        
+    def draw_tab_connection(self):
         layout = QFormLayout()
         #layout.addRow("Name",QLineEdit())
         #layout.addRow("Address",QLineEdit())
         #self.setTabText(0,"Contact Details")
-        #self.tab1.setLayout(layout)
+        #self.tab_search_study.setLayout(layout)
+        
+        self.lnEdtServerAddress = QLineEdit("127.0.0.1")
+        self.lnEdtServerPort = QLineEdit("8080")
+        self.btnServerConnect = QPushButton("Conectar")
+        
+        layout.addRow("IP Servidor", self.lnEdtServerAddress)
+        layout.addRow("Puerto", self.lnEdtServerPort)
+        layout.addRow("", self.btnServerConnect)
+
+        self.tab_connection.setLayout(layout)
+        self.setTabText(self.index_tab_connection,"Conexion")
+
+        QObject.connect(self.btnServerConnect, SIGNAL("clicked()"), self.connect_to_server)        
+       
+        
+    def draw_tab_new_study(self):
+        layout = QFormLayout()
+        #layout.addRow("Name",QLineEdit())
+        #layout.addRow("Address",QLineEdit())
+        #self.setTabText(0,"Contact Details")
+        #self.tab_search_study.setLayout(layout)
+        
+        self.lnEdtStudyTitle = QLineEdit()
+        self.txtEdtStudyMetadata = QTextEdit() #.toPlainText()
+        self.lnEdtStudyPhySt = QLineEdit()
+        self.cmbStudyDatatype = QComboBox() # self.cb.currentText()
+        self.cmbStudyDatatype.addItem("image")
+        self.cmbStudyDatatype.addItem("signal")
+        self.cmbStudyDatatype.addItem("image+signal")
+        self.btnStudyNewModality = QPushButton("Nueva modalidad")
+        self.lstStudyModality = QListView()
+        #self.update_modality_list()
+
+            
+        layout.addRow("Titulo", self.lnEdtStudyTitle)
+        layout.addRow("Metadatos", self.txtEdtStudyMetadata)
+        layout.addRow("Estructura fisiologica", self.lnEdtStudyPhySt)
+        layout.addRow("Tipo(s) de dato(s) en el estudio", self.cmbStudyDatatype )
+        hbox = QHBoxLayout()
+        hbox.addWidget(self.lstStudyModality)
+        hbox.addWidget(self.btnStudyNewModality)
+        layout.addRow("Modalidad(es)", hbox)
+
+        
+        self.btnStudySave = QPushButton("Guardar estudio")
+        layout.addRow("", self.btnStudySave)
+        QObject.connect(self.btnStudySave, SIGNAL("clicked()"), self.save_new_study)
+        QObject.connect(self.btnStudyNewModality, SIGNAL("clicked()"), self.create_new_modality_dialog)
+
+
+        self.tab_new_study.setLayout(layout)
+        self.setTabText(self.index_tab_new_study,"Nuevo Estudio")
+
+    def draw_tab_search_study(self):
+        layout = QFormLayout()
+        #layout.addRow("Name",QLineEdit())
+        #layout.addRow("Address",QLineEdit())
+        #self.setTabText(0,"Contact Details")
+        #self.tab_search_study.setLayout(layout)
 
         hbox = QHBoxLayout()
         self.searchLnEdt = QLineEdit()
@@ -77,7 +201,7 @@ class tabdemo(QTabWidget):
         header.setResizeMode(QHeaderView.Stretch)
         layout.addRow( self.listStudy)
 
-        self.btnToUpload = QPushButton("Agregar datos de nuevo sujeto al estudio")
+        self.btnToUpload = QPushButton("Cargar datos de nuevo sujeto al estudio seleccionado")
         layout.addRow("", self.btnToUpload)
         QObject.connect(self.btnToUpload, SIGNAL("clicked()"), self.switch_to_upload_tab)
         
@@ -101,8 +225,8 @@ class tabdemo(QTabWidget):
 
 
         #
-        self.setTabText(0,"Buscar Estudios")
-        self.tab1.setLayout(layout)
+        self.setTabText(self.index_tab_search_study,"Buscar Estudios")
+        self.tab_search_study.setLayout(layout)
 
         
         self.btnToSDIS = QPushButton("Explorar datos de sujeto seleccionado en el estudio")
@@ -117,7 +241,7 @@ class tabdemo(QTabWidget):
 
 
 
-    def tab2UI(self):
+    def draw_tab_sdis(self):
         layout = QFormLayout()
         self.btnClearForm = QPushButton("Limpiar")
         self.btnClearForm.setDisabled(True)
@@ -148,12 +272,14 @@ class tabdemo(QTabWidget):
 
         layout.addRow(self.listData)
     
-        self.setTabText(1,"Sujeto en el estudio")
-        self.tab2.setLayout(layout)
+        self.setTabText(self.index_tab_sdis,"Sujeto en el estudio")
+        self.tab_sdis.setLayout(layout)
 
         QObject.connect(self.btnSearchData, SIGNAL("clicked()"), self.get_data_from_sdis)
-		
-    def tab3UI(self):
+        QObject.connect(self.listData, SIGNAL("doubleClicked(QModelIndex)"), self.show_selection_in_sdis)
+        
+        
+    def draw_tab_load_data(self):
         layout = QFormLayout()
         self.lnEdtStudyId = QLineEdit()
         self.lnEdtStudyId.setFixedWidth(250)
@@ -164,7 +290,7 @@ class tabdemo(QTabWidget):
         self.lnEdtSubjectId = QLineEdit()
         self.lnEdtSubjectId.setFixedWidth(280)
 
-        self.btnCheckSubject = QPushButton("Revisar sujeto")
+        self.btnCheckSubject = QPushButton("Agregar sujeto")
         hbox.addWidget(self.lnEdtSubjectId)
         hbox.addWidget(self.btnCheckSubject)
         layout.addRow("ID de Sujeto:", hbox)
@@ -188,20 +314,117 @@ class tabdemo(QTabWidget):
         self.btnNewSDIS = QPushButton("Cargar datos")
         layout.addRow(self.btnNewSDIS )
 
-        self.setTabText(2, "Carga de Datos")
-        self.tab3.setLayout(layout)
+        self.setTabText(self.index_tab_load_data, "Carga de Datos")
+        self.tab_load_data.setLayout(layout)
 
         QObject.connect(self.btnSelectFolder, SIGNAL("clicked()"), self.get_folder)
-        QObject.connect(self.btnCheckSubject, SIGNAL("clicked()"), self.check_subject)
+        #QObject.connect(self.btnCheckSubject, SIGNAL("clicked()"), self.check_subject)self.create_new_subject_dialog()
+        QObject.connect(self.btnCheckSubject, SIGNAL("clicked()"), self.create_new_subject_dialog)
         QObject.connect(self.btnNewSDIS, SIGNAL("clicked()"), self.upload_sdis)
 
     '''
     Functions
     '''
+    def update_modality_list(self):
+        # Filling the modality list
+        self.lstStudyModality.reset()
+        model = QStandardItemModel(self.lstStudyModality)
+
+
+        logging.debug("Listando modalidades")
+        results = self.client.service.handle_list_modalities()
+        #print "***",results
+
+        modalities = []
+        for r in results[0]:
+            modality = r
+            logging.debug("Found: "+modality.name)
+            modalities.append( modality.name )
+
+        ####
+        for modl in modalities:
+            item = QStandardItem(modl)
+            item.setCheckable(True)
+            model.appendRow(item)
+        self.lstStudyModality.setModel(model)
+        #
+
+
+    def create_new_modality_dialog(self):
+        logging.debug("Opening a new popup window...")
+        self.new_mod = QWidget()
+        self.new_mod.setGeometry(QRect(100, 100, 400, 200))
+        layout = QFormLayout()
+
+        self.new_mod.lnEdtModalityName = QLineEdit()
+        self.new_mod.txtEdtModalityInfo = QTextEdit()
+        self.new_mod.btnModalitySave = QPushButton("Guardar modalidad")
+
+        layout.addRow("Nombre de modalidad:", self.new_mod.lnEdtModalityName)
+        layout.addRow("Informacion general:", self.new_mod.txtEdtModalityInfo)
+        layout.addRow(self.new_mod.btnModalitySave)
+
+        self.new_mod.setLayout(layout)
+        self.new_mod.show()
+
+        QObject.connect(self.new_mod.btnModalitySave, SIGNAL("clicked()"), self.save_modality)
+        
+    def save_modality(self):
+        modalityName = str(self.new_mod.lnEdtModalityName.text())
+        modalityInfo = str(self.new_mod.txtEdtModalityInfo.toPlainText())
+        logging.debug("SAVING..."+modalityName+" with info "+modalityInfo)
+        #todo: Store to platform.
+        asub = self.client.factory.create('ns0:RestModality')
+        asub.name = modalityName
+        asub.information = modalityInfo
+        asub = self.client.service.handle_save_modality(asub)
+
+        if len(asub.id) > 0:
+            msgAlert = QMessageBox.information(self, 'Creacion de modalidad',"Modalidad creada exitosamente.",QMessageBox.Ok)
+        else:
+            msgAlert = QMessageBox.information(self, 'Creacion de modalidad',"Modalidad no pudo ser creada.",QMessageBox.Ok)
+        self.new_mod.close()
+        self.update_modality_list()
+        self.new_mod.close()
     
+    def save_new_study(self):
+        logging.debug("ALMACENANDO ESTUDIO (TODO)")
+
+        
+        model = self.lstStudyModality.model()
+        modalities = []
+        i = 0
+        while model.item(i):
+            if model.item(i).checkState():
+                modalities.append( str(model.item(i).text()) )
+            i += 1
+        modalities = ','.join(modalities)
+
+        p = self.client.factory.create('ns0:RestStudy')
+        p.title = str(self.lnEdtStudyTitle.text())
+        p.metadata = str(self.txtEdtStudyMetadata.toPlainText())
+        p.physiological_st = str(self.lnEdtStudyPhySt.text())
+        p.data_type_in_study = str(self.cmbStudyDatatype.currentText() )
+        p.modalities=modalities
+
+        p = self.client.service.handle_save_study(p) # updated with the ID
+        study_id = p.id
+    
+        if len(study_id ) > 0:
+            msgAlert = QMessageBox.information(self, 'Creacion de estudio',"Estudio almacenado exitosamente.",QMessageBox.Ok)
+        else:
+            msgAlert = QMessageBox.warning(self, 'Creacion de estudio',"Estudio no pudo ser almacenado.",QMessageBox.Ok)
+
+
     def upload_sdis(self):
-        print "UPLOAD DATA",
+        logging.debug("UPLOAD DATA")
         self.btnNewSDIS.setDisabled(True)
+        
+        if not self.check_subject():
+            self.btnNewSDIS.setDisabled(False)
+            msgAlert = QMessageBox.warning(self, 'Carga de datos',"Sujeto debe ser agregado previamente.",QMessageBox.Ok)
+            return None
+        
         study_id = str(self.lnEdtStudyId.text())
         subject_id = str(self.lnEdtSubjectId.text())
         is_pacient = False
@@ -210,7 +433,7 @@ class tabdemo(QTabWidget):
         data_source_dir = str(self.lnEdtFolderPath.text())
         package_fname=str(self.lnEdtPackageName.text())
 
-        print "from",data_source_dir,"for study",study_id,"and subject",subject_id,"(",is_pacient,")"
+        #logging.debug("from",data_source_dir,"for study",study_id,"and subject",subject_id,"(",is_pacient,")")
         # get all the data inside
         zipf = zipfile.ZipFile("/tmp/"+package_fname, "w", zipfile.ZIP_DEFLATED)
         lfiles = []
@@ -254,7 +477,7 @@ class tabdemo(QTabWidget):
         pc = self.client.service.handle_capture_upload( pc )
 
         if len(pc.id) > 0:
-            print "A new Subject capture has been created ("+pc.id+")"
+            logging.debug("A new Subject capture has been created ("+pc.id+")")
             msgAlert = QMessageBox.information(self, 'Carga de datos',"Se registraron exitosamente los datos del sujeto en el estudio.",QMessageBox.Ok)
             #clear lineedits
             self.lnEdtStudyId.clear()
@@ -268,31 +491,35 @@ class tabdemo(QTabWidget):
         id = self.lnEdtSubjectId.text()
         if len(id) == 0 or len(study_id) == 0:
             return None
-        print id
+        logging.debug(id)
         # check if subject exists
         result = self.client.service.handle_get_anonymized_subject(id)
-        print result
-        print len(result)
+        logging.debug(result)
+        logging.debug(len(result))
 
+        if len(result) ==  0:
+            return False
+        return True
         # if it exists, show a message 
+        '''
         if len(result) ==  0:
         # otherwise ask if the user wants to create a new sibject register.
             choice = QMessageBox.question(self, 'Verificacion de sujeto',"Desea crear un nuevo registro de sujeto?",QMessageBox.Yes | QMessageBox.No)
             if choice == QMessageBox.Yes:
-                print "desplegando dialogo de creacion"
+                logging.debug("desplegando dialogo de creacion")
                 self.create_new_subject_dialog()
                 #sys.exit()
             else:
                 pass
         else:
-            print "OK, subject exists!"
+            logging.debug("OK, subject exists!")
             msgAlert = QMessageBox.information(self, 'Verificacion de sujeto',"Sujeto ya existe.",QMessageBox.Ok)
-
+        '''
 
 
 
     def create_new_subject_dialog(self):
-        print "Opening a new popup window..."
+        logging.debug("Opening a new popup window...")
         self.w = QWidget()
         self.w.setGeometry(QRect(100, 100, 400, 200))
         layout = QFormLayout()
@@ -317,7 +544,7 @@ class tabdemo(QTabWidget):
         QObject.connect(self.w.btnSaveSubject, SIGNAL("clicked()"), self.save_subject)
         
     def save_subject(self):
-        print "SAVING...",self.w.lnEdtSID.text()
+        logging.debug("SAVING...",self.w.lnEdtSID.text())
         #todo: Store to platform.
         asub = self.client.factory.create('ns0:RestAnonymizedSubject')
         asub.SID = str(self.w.lnEdtSID.text())
@@ -332,7 +559,7 @@ class tabdemo(QTabWidget):
 
 
     def btngroup(self,btn):
-        print btn.text()+" is selected"
+        logging.debug(btn.text()+" is selected")
         self.w.selectedGenre = btn.text()
 
 
@@ -342,7 +569,7 @@ class tabdemo(QTabWidget):
         self.lnEdtFolderPath.setText(fname)
 
     def switch_to_sdis_tab(self):
-        self.setCurrentIndex(1)
+        self.setCurrentIndex(self.index_tab_sdis)
 
         sdis_id = str(self.listSDIS.item(self.listSDIS.currentRow(), 0).text())
         sdis_subject = str(self.listSDIS.item(self.listSDIS.currentRow(), 1).text())
@@ -352,13 +579,13 @@ class tabdemo(QTabWidget):
         self.btnSearchData.setDisabled(False)
 
     def switch_to_upload_tab(self):
-        self.setCurrentIndex(2)
+        self.setCurrentIndex(self.index_tab_load_data)
         id = self.lResultStudies[int(self.listStudy.currentRow())]
         self.lnEdtStudyId.setText(id)
 
     def search_studies(self):
-        print "BUSCANDO ESTUIDIOS "+self.searchLnEdt.text()
-        print self.client
+        logging.debug("BUSCANDO ESTUIDIOS "+self.searchLnEdt.text())
+        logging.debug(self.client)
         results = self.client.service.handle_search_study_by_title(self.searchLnEdt.text())
         #print "***",results
 
@@ -414,7 +641,7 @@ class tabdemo(QTabWidget):
         
         self.listData.clearContents()
         inx = 0
-        print "#Resultados:",len(results[0])
+        logging.debug("#Resultados:"+str(len(results[0])))
         #print results[0]
         for r in results[0]:
             data = r
@@ -425,11 +652,36 @@ class tabdemo(QTabWidget):
             self.listData.setItem(inx,1,QTableWidgetItem(data.filename))
             self.listData.setItem(inx,2,QTableWidgetItem(data.datatype))
             inx+=1
+
+    def show_selection_in_sdis(self, index):
+        id = str(self.listData.item(index.row(), 0).text())
+        #msgAlert = QMessageBox.information(self, 'Dato de sujeto',"Mostrando item "+str(index.row())+" - "+ id,QMessageBox.Ok)
+        data = self.client.service.handle_get_SDIS_data(id)
+        
+        temp_output = '/tmp/_'+data.filename+'.png'
+        logging.debug("Decoding received file :"+temp_output)
+        with open(temp_output, "wb") as fh:
+            fh.write(data.content.decode('base64'))
+
+
+        dialog = QDialog()
+        dialog.setWindowTitle("Visualizacion de dato:"+id)
+        layout = QVBoxLayout()
+
+        lbl = QLabel()
+        lbl.setPixmap(QPixmap(temp_output))
+        layout.addWidget( lbl)
+
+
+        dialog.setLayout(layout)
+        dialog.exec_()
+        
         
 
 def main():
+    logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p', filename='/tmp/prism_client.log',level=logging.DEBUG)    
     app = QApplication(sys.argv)
-    ex = tabdemo()
+    ex = PRISMTabClient()
     ex.resize(800, 500)
     ex.show()
     sys.exit(app.exec_())

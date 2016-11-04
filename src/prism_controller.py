@@ -10,6 +10,10 @@ import time
 from datetime import datetime
 import logging
 import hashlib
+import bson
+import dicom as dcm
+from scipy import misc
+import base64
 
 class PackageContent(object):
     id = unicode
@@ -64,6 +68,7 @@ class RestData(object):
     size = int
     checksum = unicode
     datatype = unicode
+    content = unicode
 
     def __repr__(self):
         return "RestData(%s,%s,%s,%s,%s,%s)" % (
@@ -72,8 +77,15 @@ class RestData(object):
         )
 
 
+class RestModality(object):
+    id = unicode
+    name = unicode
+    information = unicode
 
-
+    
+class RestPhysiologicalStructure(object):
+    id = unicode
+    name = unicode    
 ######################
 
 #TODO: Change to SdisUploadController
@@ -90,7 +102,7 @@ class SDISController:
 
         logging.debug("Identifying repository path")
         # store data files... path is formed by 
-        locpath = config.data_dir + os.sep + st.physiological_st 
+        locpath = config.data_dir + os.sep + st.physiological_st.name 
         if not os.path.exists(locpath):
             os.makedirs(locpath)
         
@@ -194,7 +206,35 @@ class SDISController:
             o.datatype = i.datatype
             response.append( o )
         return response
+    
+    def get_SDIS_data(self, id):
+        logging.debug("Searching for data in SDIS with id "+id)
+        
+        
+        result = Data.objects(id=bson.objectid.ObjectId(id)).first()
+        
+        o = RestData()
+        o.id = str(result.id)
+        o.location = result.location
+        o.filename = result.filename
+        o.size = result.size
+        o.checksum = result.checksum
+        o.datatype = result.datatype
+        
 
+        fname = result.location+os.sep+result.filename
+        imgObj = dcm.read_file(fname)
+        img = imgObj.pixel_array
+        final_output = '/tmp'+os.sep+result.filename+'.png'
+        misc.imsave(final_output, img)
+        
+        with open(final_output,'rb') as enc_image:
+            encoded_string = base64.b64encode(enc_image.read())
+        
+        o.content = encoded_string
+
+        return o
+        
             
 class StudyController:
     def __init__(self):
@@ -211,7 +251,7 @@ class StudyController:
             news.title = s.title
             #news.date_added = 
             news.metadata = s.metadata
-            news.physiological_st = s.physiological_st
+            news.physiological_st = s.physiological_st.name
             news.data_type_in_study = s.data_type_in_study
             news.modalities = '/'.join( x.name for x in s.modalities)
             lResult.append( news )
@@ -233,11 +273,39 @@ class StudyController:
                 newmod = Modality(name=m).save()
                 lMods.append( newmod )
         logging.debug("...storing Study object")
+        
+        phy_st = PhysiologicalStructure.objects(name=s.physiological_st)
+        phy_obj = None
+        if phy_st.count():
+            phy_obj = phy_st.first()
+        else:
+            logging.debug("Creating new physiological structure")
+            phy_obj = PhysiologicalStructure(name=s.physiological_st).save()
+        
         today = datetime.fromtimestamp(time.time()) 
-        st = Study(title=s.title, date_added=today, metadata=s.metadata, physiological_st=s.physiological_st, data_type_in_study=s.data_type_in_study, modalities=lMods).save()
+        st = Study(title=s.title, date_added=today, metadata=s.metadata, physiological_st=phy_obj, data_type_in_study=s.data_type_in_study, modalities=lMods).save()
         logging.debug("...id assigned "+str(st.id))
         
         return str(st.id)
+
+    def store_modality(self, m):
+        logging.debug("Creating Modality object")
+        new_modality = Modality(name=m.name, information=m.information).save()
+        logging.debug("...id assigned "+str(new_modality.id))
+        return str(new_modality.id)
+
+    def get_modalities(self):
+        logging.debug("Getting modalities")
+        results = Modality.objects()
+        lResult = []
+        for s in results:
+            m = RestModality()
+            m.id = str(s.id)
+            m.name = str(s.name)
+            m.information = str(s.information)
+            lResult.append(m)
+        return lResult 
+        
         
 class AnonymizedSubjectController:
     def __init__(self):
@@ -297,33 +365,37 @@ class FrontController(WSRoot):
             logging.debug('Creating anonymizedSubjectController')
             self.anonymizedSubjectController = AnonymizedSubjectController()
 
-    '''
-    @expose(RestStudy)
-    def newStudy(self):
-        s = RestStudy()
-        s.title = ''
-        s.date_added = ''
-        s.metadata = ''
-        s.physiological_st = ''
-        s.data_type_in_study = ''
-        s.modalities = ''
-        return s
-    '''
 
-    #@expose([RestStudy])
-    #@validate([RestStudy])
+
     @signature([RestStudy], unicode)
     def handle_search_study_by_title(self, title):
         logging.debug( "Querying db for studies matching "+title )
         self.init()
         return self.studyController.search_study_by_title(title)
             
+
+    @signature([RestModality], unicode)
+    def handle_list_modalities(self):
+        logging.debug("Querying for modalities")
+        self.init()
+        return self.studyController.get_modalities()
+
     @expose(RestStudy)
     @validate(RestStudy)
     def handle_save_study(self, o):
         logging.debug( "received new study"+o.title )
         self.init()
         id = self.studyController.store_study(o)
+        o.id = id
+        return o
+
+
+    @expose(RestModality)
+    @validate(RestModality)
+    def handle_save_modality(self, o):
+        logging.debug( "received new modality"+o.name )
+        self.init()
+        id = self.studyController.store_modality(o)
         o.id = id
         return o
 
@@ -360,6 +432,11 @@ class FrontController(WSRoot):
         self.init()
         return self.sdisController.get_data_in_sdis(sdisid)
     
+    @signature(RestData, unicode)
+    def handle_get_SDIS_data(self, dataid):
+        logging.debug( "Querying db for sdis data with id "+ dataid)
+        self.init()
+        return self.sdisController.get_SDIS_data(dataid)        
 
 
 
