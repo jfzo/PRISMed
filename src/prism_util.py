@@ -30,6 +30,12 @@ class SubjectCaptureUnpacker:
         if metainfo.readline().strip() == 'P':
             is_pacient = True
 
+
+        dtcapture_date = map(int, metainfo.readline().strip().split(",")[1].split("-") )
+        dtcapture_date = datetime.datetime(dtcapture_date[0], dtcapture_date[1], dtcapture_date[2])
+
+        labels = metainfo.readline().strip().split(",")[1:]
+
         assert( 'DATA:' == metainfo.readline().strip()) # DATA LINE
 
         logging.debug("File looks ok. Verifying packed content...")
@@ -58,10 +64,13 @@ class SubjectCaptureUnpacker:
         assert( sbj.count() > 0)
         sbj = sbj.first()
         # create capture and data objects
-        sc = SubjectDataInStudy(in_study=st, subject=sbj, is_pacient=is_pacient)
+        logging.debug("Creating SubjectDataInStudy")
+        sc = SubjectDataInStudy(in_study=st, subject=sbj, is_pacient=is_pacient, capture_date=dtcapture_date, labels=labels)
+        logging.debug("With tags..."+str(sc.labels) )
+
         lDataObjs = []
         for dtype, dsize, dname in lData:
-            dt = Data(datatype=dtype, filename=dname, size=dsize)
+            dt = Data(datatype=dtype, filename=dname, size=dsize, capture_date = dtcapture_date, labels=labels)
             lDataObjs.append( dt )
         # returns the Study obj, AnonymizedSubject obj, Capture obj, a list with Data objs and the full path where the package were extracted.
         return st, sbj, sc, lDataObjs, packedContentPath

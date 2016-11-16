@@ -38,6 +38,8 @@ class SubjectDataInStudy(odm.Document):
     is_pacient = odm.BooleanField(default=False)
     in_study = odm.ReferenceField(Study, required=True)
     subject = odm.ReferenceField(AnonymizedSubject, required=True)
+    capture_date = odm.DateTimeField(required=True)
+    labels = odm.ListField(odm.StringField(), default=list)
 
     def init(self, ):
         pass
@@ -51,8 +53,8 @@ class Data(odm.Document):
     checksum = odm.StringField(required=True, unique=True)
     datatype = odm.StringField(choices=('image','signal'), max_length=20, required=True) #set by the inherited class.
     parent_sdis = odm.ReferenceField(SubjectDataInStudy, required=True)
-
-    #meta = {'allow_inheritance':True}
+    labels = odm.ListField(odm.StringField(), default=list)
+    capture_date = odm.DateTimeField(required=True)   #meta = {'allow_inheritance':True}
     #meta = {'abstract':True}
 
     #def associate_to_capture(self, c):

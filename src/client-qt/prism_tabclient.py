@@ -211,7 +211,7 @@ class PRISMTabClient(QTabWidget):
         layout.addRow("Datos de sujetos en estudio seleccionado :",QLabel(""))
 
         # SubjectDataInStudy display list:
-        header_labels = ['ID', 'ID de sujeto', 'Es paciente?']
+        header_labels = ['ID', 'ID de sujeto', 'Es paciente?', 'Fecha captura', 'Etiquetas']
         self.listSDIS = QTableWidget(0,len(header_labels))
         self.listSDIS.setHorizontalHeaderLabels(header_labels)
 
@@ -296,7 +296,21 @@ class PRISMTabClient(QTabWidget):
         layout.addRow("ID de Sujeto:", hbox)
         
         self.chkIsPacient = QCheckBox()
-        layout.addRow("Es paciente?",  self.chkIsPacient)  
+        layout.addRow("Es paciente?",  self.chkIsPacient)
+
+        self.calCaptureDate = QCalendarWidget(self)
+        self.calCaptureDate.setGridVisible(True)
+        self.calCaptureDate.clicked[QDate].connect(self.showDate)
+
+        layout.addRow("Fecha de captura", self.calCaptureDate)
+
+
+        self.captureDate = self.calCaptureDate.selectedDate().toString()
+
+
+        self.lblLabels = QLineEdit()
+        layout.addRow("Etiquetas", self.lblLabels)
+
 
         hbox = QHBoxLayout()
         self.lnEdtFolderPath = QLineEdit()
@@ -325,6 +339,11 @@ class PRISMTabClient(QTabWidget):
     '''
     Functions
     '''
+
+    def showDate(self, date):
+        self.captureDate = date.toString(Qt.ISODate) # formato YYYY-MM-DD
+        print "Se selecciono",self.captureDate
+
     def update_modality_list(self):
         # Filling the modality list
         self.lstStudyModality.reset()
@@ -417,6 +436,11 @@ class PRISMTabClient(QTabWidget):
 
 
     def upload_sdis(self):
+        '''
+        Creates the Package together with its METAinfo.
+        Then, uploads it to the server.
+        :return:
+        '''
         logging.debug("UPLOAD DATA")
         self.btnNewSDIS.setDisabled(True)
         
@@ -428,6 +452,10 @@ class PRISMTabClient(QTabWidget):
         study_id = str(self.lnEdtStudyId.text())
         subject_id = str(self.lnEdtSubjectId.text())
         is_pacient = False
+        capture_date =  self.captureDate # formato YYYY-MM-DD
+
+        labels =  str(self.lblLabels.text())
+
         if self.chkIsPacient.isChecked():
             is_pacient = True
         data_source_dir = str(self.lnEdtFolderPath.text())
@@ -444,13 +472,15 @@ class PRISMTabClient(QTabWidget):
                 zipf.write(os.path.join(root, file), 'DATA'+os.sep+file)
 
         metainfo = open('/tmp/META.INFO','w')
-        metainfo.write('1.0')
-        metainfo.write('\nSTUDY,'+study_id)
-        metainfo.write('\nSUBJECT,'+subject_id)
-        if is_pacient:
+        metainfo.write('1.0') # version
+        metainfo.write('\nSTUDY,'+study_id) # study id
+        metainfo.write('\nSUBJECT,'+subject_id) # anonymized_subject id
+        if is_pacient: # Writes if it's pacient or just subject.
             metainfo.write('\nP')
         else:
             metainfo.write('\nNO_P')
+        metainfo.write('\nCAPTURE_DATE,'+capture_date)
+        metainfo.write('\nLABELS,'+labels)
         metainfo.write('\nDATA:\n')
         for f,s in lfiles:
             datatype=''
@@ -584,9 +614,9 @@ class PRISMTabClient(QTabWidget):
         self.lnEdtStudyId.setText(id)
 
     def search_studies(self):
-        logging.debug("BUSCANDO ESTUIDIOS "+self.searchLnEdt.text())
+        logging.debug("BUSCANDO ESTUDIOS "+self.searchLnEdt.text())
         logging.debug(self.client)
-        results = self.client.service.handle_search_study_by_title(self.searchLnEdt.text())
+        results = self.client.service.handle_search_study_by_query(self.searchLnEdt.text())
         #print "***",results
 
         self.lResultStudies = []
@@ -619,9 +649,11 @@ class PRISMTabClient(QTabWidget):
             sdis = r
             self.lResultSDIS.append(sdis.subject)
             self.listSDIS.insertRow(inx)
-            self.listSDIS.setItem(inx,0,QTableWidgetItem(sdis.id))
-            self.listSDIS.setItem(inx,1,QTableWidgetItem(sdis.subject))
-            self.listSDIS.setItem(inx,2,QTableWidgetItem(str(sdis.is_pacient).replace("False","No").replace("True","Yes") ))
+            self.listSDIS.setItem(inx, 0, QTableWidgetItem(sdis.id))
+            self.listSDIS.setItem(inx, 1, QTableWidgetItem(sdis.subject))
+            self.listSDIS.setItem(inx, 2, QTableWidgetItem(str(sdis.is_pacient).replace("False","No").replace("True","Yes") ))
+            self.listSDIS.setItem(inx, 3, QTableWidgetItem(sdis.capture_date))
+            self.listSDIS.setItem(inx, 4, QTableWidgetItem(sdis.labels))
             inx+=1
         #print self.ui.listStudy.currentItem().text()
 

@@ -55,7 +55,9 @@ class RestSDIS(object):
     is_pacient = bool
     #in_study = unicode
     subject = unicode #SID
-     
+    capture_date = unicode
+    labels = unicode #comma separated strings
+    
     def __repr__(self):
         return "RestAnonymizedSubject(%s, %s, %s)" % (
             self.id, self.is_pacient,  self.subject
@@ -69,6 +71,7 @@ class RestData(object):
     checksum = unicode
     datatype = unicode
     content = unicode
+    labels = unicode  # comma separated strings
 
     def __repr__(self):
         return "RestData(%s,%s,%s,%s,%s,%s)" % (
@@ -151,7 +154,10 @@ class SDISController:
             #logging.debug("Moving from "+ from_path +" to "+ dest_path)
             os.rename(from_path, dest_path) 
             d.checksum = self.md5(dest_path)
-            d.save()
+            try:
+                d.save()
+            except odm.NotUniqueError:
+                logging.warning("Duplicate file uploaded: "+d.filename)
         return str(sdis.id)
 
     def get_SDIS_by_study(self, id):
@@ -168,6 +174,8 @@ class SDISController:
             o.id = str(i.id)
             o.subject = i.subject.SID
             o.is_pacient = i.is_pacient
+            o.labels = ','.join(i.labels)
+            o.capture_date = str(i.capture_date.date())
             response.append( o )
         return response
 
@@ -180,6 +188,8 @@ class SDISController:
             o.id = str(i.id)
             o.subject = i.subject.SID
             o.is_pacient = i.is_pacient
+            o.labels = ','.join(i.labels)
+            o.capture_date = str(i.capture_date.date())
             response.append( o )
         return response[0]
 
@@ -204,13 +214,14 @@ class SDISController:
             o.size = i.size
             o.checksum = i.checksum
             o.datatype = i.datatype
+            o.labels = ','.join(i.labels)
+            o.capture_date = str(i.capture_date.date())
             response.append( o )
         return response
     
     def get_SDIS_data(self, id):
         logging.debug("Searching for data in SDIS with id "+id)
-        
-        
+
         result = Data.objects(id=bson.objectid.ObjectId(id)).first()
         
         o = RestData()
@@ -220,7 +231,8 @@ class SDISController:
         o.size = result.size
         o.checksum = result.checksum
         o.datatype = result.datatype
-        
+        o.labels = ','.join(result.labels)
+        o.capture_date = str(result.capture_date.date())
 
         fname = result.location+os.sep+result.filename
         imgObj = dcm.read_file(fname)
@@ -240,7 +252,7 @@ class StudyController:
     def __init__(self):
         logging.debug("Initializing StudyController")
         config.connect()
-        
+
     def search_study_by_title(self, titleq):
         logging.debug("Searching for all the studies matching title: "+titleq)
         results = Study.objects(title__icontains=titleq)
@@ -258,6 +270,50 @@ class StudyController:
         return lResult
 
 
+    def search_study_by_label(self, label):
+        logging.debug("Searching for all the studies whose SDIS matching label: " + label)
+
+        results = SubjectDataInStudy.objects(labels=label)
+        studies = set()
+        lResult = []
+        for s in results:
+            logging.debug("Study found: "+ str(s.in_study.id) )
+            if not str(s.in_study.id) in studies:
+                studies.add(str(s.in_study.id))
+                news = RestStudy()
+                news.id = str(s.in_study.id)
+                news.title = s.in_study.title
+                # news.date_added =
+                news.metadata = s.in_study.metadata
+                news.physiological_st = s.in_study.physiological_st.name
+                news.data_type_in_study = s.in_study.data_type_in_study
+                news.modalities = '/'.join(x.name for x in s.in_study.modalities)
+                lResult.append(news)
+
+        return lResult
+
+    def search_study_by_query(self, query):
+        logging.debug("Searching for all the studies whose SDIS match keyword: " + query)
+        # get keywords from the query
+
+        keywords = query.replace(',',' ').replace('+',' ').replace('"',' ').replace("'",' ').split(' ')
+        lResult = []
+        studies = set()
+        for k in keywords:
+            sresults = self.search_study_by_label(k)
+            for s in sresults:
+                if not s.id in studies:
+                    studies.add( s.id )
+                    lResult.append(s)
+
+            sresults = self.search_study_by_title(k)
+            for s in sresults:
+                if not s.id in studies:
+                    studies.add(s.id)
+                    lResult.append(s)
+
+        return lResult
+
 
     def store_study(self, s):
         #create model object, save and return id
@@ -273,7 +329,7 @@ class StudyController:
                 newmod = Modality(name=m).save()
                 lMods.append( newmod )
         logging.debug("...storing Study object")
-        
+
         phy_st = PhysiologicalStructure.objects(name=s.physiological_st)
         phy_obj = None
         if phy_st.count():
@@ -281,11 +337,11 @@ class StudyController:
         else:
             logging.debug("Creating new physiological structure")
             phy_obj = PhysiologicalStructure(name=s.physiological_st).save()
-        
-        today = datetime.fromtimestamp(time.time()) 
+
+        today = datetime.fromtimestamp(time.time())
         st = Study(title=s.title, date_added=today, metadata=s.metadata, physiological_st=phy_obj, data_type_in_study=s.data_type_in_study, modalities=lMods).save()
         logging.debug("...id assigned "+str(st.id))
-        
+
         return str(st.id)
 
     def store_modality(self, m):
@@ -304,9 +360,9 @@ class StudyController:
             m.name = str(s.name)
             m.information = str(s.information)
             lResult.append(m)
-        return lResult 
-        
-        
+        return lResult
+
+
 class AnonymizedSubjectController:
     def __init__(self):
         logging.debug("Initializing AnonymizedSubjectController")
@@ -372,7 +428,20 @@ class FrontController(WSRoot):
         logging.debug( "Querying db for studies matching "+title )
         self.init()
         return self.studyController.search_study_by_title(title)
-            
+
+    @signature([RestStudy], unicode)
+    def handle_search_study_by_label(self, label):
+        logging.debug("Querying db for studies matching " + label)
+        self.init()
+        return self.studyController.search_study_by_label(label)
+
+
+    @signature([RestStudy], unicode)
+    def handle_search_study_by_query(self, keyword):
+        logging.debug( "Querying db for studies matching "+keyword )
+        self.init()
+        return self.studyController.search_study_by_query(keyword)
+
 
     @signature([RestModality], unicode)
     def handle_list_modalities(self):
