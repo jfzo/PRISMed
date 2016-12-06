@@ -1,0 +1,11 @@
+dicom
+mongoengine
+suds
+Crypto
+logging
+
+[dev]
+check-manifest
+
+[test]
+coverage

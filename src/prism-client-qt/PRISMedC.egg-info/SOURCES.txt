@@ -1,0 +1,8 @@
+README.rst
+setup.py
+PRISMedC.egg-info/PKG-INFO
+PRISMedC.egg-info/SOURCES.txt
+PRISMedC.egg-info/dependency_links.txt
+PRISMedC.egg-info/entry_points.txt
+PRISMedC.egg-info/requires.txt
+PRISMedC.egg-info/top_level.txt
