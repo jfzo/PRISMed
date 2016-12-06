@@ -11,11 +11,11 @@ from suds.client import Client
 from suds import TypeNotFound
 import base64
 
-from prism_model import *
+#from prism_model import *
 #import prism_config as config
 import time
 from datetime import datetime
-from pymongo import MongoClient
+#from pymongo import MongoClient
 import zipfile
 
 import logging

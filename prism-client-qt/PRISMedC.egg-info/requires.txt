@@ -1,5 +1,4 @@
-dicom
-mongoengine
+pydicom
 suds
 Crypto
 logging
