@@ -44,11 +44,18 @@ class SubjectCaptureUnpacker:
         lNotFound = []
         lData = []
         for c in metainfo:
-            ftype, fsize, fpath, fname = c.strip().split(',')
+            logging.debug("Fields found:"+str(len(c.strip().split(','))))
+            ftype, fsize, fpath, fname, meta = c.strip().split(',')
             if not os.path.exists(packedContentPath + os.sep + fpath + os.sep + fname):
                 lNotFound.append( fname )
             else:
-                lData.append( (ftype, fsize, fname) )
+                enc_fields = {}
+                fields = meta.split(" ") #pares llave valor
+                for f in  fields:
+                    k,v = f.split(':')
+                    #v = odm.fields.BinaryField( v.replace("JUMP", "\n").replace("COMMA", ",").replace("SPACE", " ").replace("2DOTS", ":") )
+                    enc_fields[k] = v
+                lData.append( (ftype, fsize, fname, enc_fields))
 
         assert( len(lNotFound) == 0 ) #check that all files were added.
         metainfo.close()
@@ -69,8 +76,8 @@ class SubjectCaptureUnpacker:
         logging.debug("With tags..."+str(sc.labels) )
 
         lDataObjs = []
-        for dtype, dsize, dname in lData:
-            dt = Data(datatype=dtype, filename=dname, size=dsize, capture_date = dtcapture_date, labels=labels)
+        for dtype, dsize, dname, enc_fields in lData:
+            dt = Data(datatype=dtype, filename=dname, size=dsize, capture_date = dtcapture_date, labels=labels, deidentified_fields = enc_fields)
             lDataObjs.append( dt )
         # returns the Study obj, AnonymizedSubject obj, Capture obj, a list with Data objs and the full path where the package were extracted.
         return st, sbj, sc, lDataObjs, packedContentPath

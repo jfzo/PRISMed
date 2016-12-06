@@ -19,6 +19,12 @@ from pymongo import MongoClient
 import zipfile
 
 import logging
+import dicom as dcm
+
+from Crypto.PublicKey import RSA
+from Crypto.Cipher import PKCS1_OAEP
+
+
 
 class PRISMTabClient(QTabWidget):
     client = None
@@ -26,11 +32,38 @@ class PRISMTabClient(QTabWidget):
     lResultSDIS = None #used to keep the returned results.
     lResultData = None #used to keep the returned results.
 
-
+    logger = None
 
     def __init__(self, parent = None):  
 
         super(PRISMTabClient, self).__init__(parent)
+
+        """
+        logging configuration
+        """
+        self.logger = logging.getLogger(__name__)
+        self.logger.setLevel(logging.DEBUG)
+
+        # create file handler which logs even debug messages
+        fh = logging.FileHandler('prism_client.log')
+        fh.setLevel(logging.DEBUG)
+        # create console handler with a higher log level
+
+        ch = logging.StreamHandler()
+        ch.setLevel(logging.INFO)
+
+        # create formatter and add it to the handlers
+        # formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        formatter = logging.Formatter('%(asctime)s - %(levelname)s %(module)s[%(lineno)d] - %(message)s')
+
+        ch.setFormatter(formatter)
+        fh.setFormatter(formatter)
+
+        # add the handlers to logger
+        self.logger.addHandler(ch)
+        self.logger.addHandler(fh)
+        """
+        """
 
         self.bind_address = ""
         self.bind_port = ""
@@ -71,20 +104,20 @@ class PRISMTabClient(QTabWidget):
         self.setWindowTitle("Cliente PRISM vAlfa")
 		
         self.connect(self, SIGNAL('currentChanged(int)'), self.selector)
-        
+
     def selector(self, selected_index):
         if self.connected_ok:
             if selected_index == self.index_tab_connection:
-                logging.debug("Se selecciono la primera")
+                self.logger.debug("Tab de conexion")
             elif selected_index == self.index_tab_new_study:
-                logging.debug("Se selecciono la segunda")
+                self.logger.debug("Tab de estudio")
                 self.update_modality_list()
             elif selected_index == self.index_tab_search_study:
-                logging.debug("Se selecciono la tercera")
+                self.logger.debug("Tab de busqueda")
             elif selected_index == self.index_tab_sdis:
-                logging.debug("Se selecciono la cuarta")
+                self.logger.debug("Tab de SubjectDataInStudy")
             elif selected_index == self.index_tab_load_data:
-                logging.debug("Se selecciono la quinta")
+                self.logger.debug("Tab de carga de datos")
  
             
         
@@ -97,7 +130,7 @@ class PRISMTabClient(QTabWidget):
         self.bind_port = str(self.lnEdtServerPort.text())
         
         url = 'http://'+self.bind_address+':'+str(self.bind_port)+'/prism/api.wsdl'
-        logging.debug("Connecting to URL:"+ url)
+        self.logger.debug("Connecting to URL:"+ url)
         try:
             self.client = Client(url, cache=None)
             self.connected_ok = True
@@ -105,7 +138,7 @@ class PRISMTabClient(QTabWidget):
             self.client = Client(url, cache=None)
             self.connected_ok = True
         except URLError:
-            logging.error("Error al conectar")
+            self.logger.error("Error al conectar")
 
         if self.connected_ok:
             self.btnServerConnect.setDisabled(True)
@@ -342,7 +375,7 @@ class PRISMTabClient(QTabWidget):
 
     def showDate(self, date):
         self.captureDate = date.toString(Qt.ISODate) # formato YYYY-MM-DD
-        print "Se selecciono",self.captureDate
+        self.logger.debug("Se selecciono "+self.captureDate)
 
     def update_modality_list(self):
         # Filling the modality list
@@ -350,14 +383,14 @@ class PRISMTabClient(QTabWidget):
         model = QStandardItemModel(self.lstStudyModality)
 
 
-        logging.debug("Listando modalidades")
+        self.logger.debug("Listando modalidades")
         results = self.client.service.handle_list_modalities()
         #print "***",results
 
         modalities = []
         for r in results[0]:
             modality = r
-            logging.debug("Found: "+modality.name)
+            self.logger.debug("Found: "+modality.name)
             modalities.append( modality.name )
 
         ####
@@ -370,7 +403,7 @@ class PRISMTabClient(QTabWidget):
 
 
     def create_new_modality_dialog(self):
-        logging.debug("Opening a new popup window...")
+        self.logger.debug("Opening a new popup window...")
         self.new_mod = QWidget()
         self.new_mod.setGeometry(QRect(100, 100, 400, 200))
         layout = QFormLayout()
@@ -391,7 +424,7 @@ class PRISMTabClient(QTabWidget):
     def save_modality(self):
         modalityName = str(self.new_mod.lnEdtModalityName.text())
         modalityInfo = str(self.new_mod.txtEdtModalityInfo.toPlainText())
-        logging.debug("SAVING..."+modalityName+" with info "+modalityInfo)
+        self.logger.debug("SAVING..."+modalityName+" with info "+modalityInfo)
         #todo: Store to platform.
         asub = self.client.factory.create('ns0:RestModality')
         asub.name = modalityName
@@ -407,7 +440,7 @@ class PRISMTabClient(QTabWidget):
         self.new_mod.close()
     
     def save_new_study(self):
-        logging.debug("ALMACENANDO ESTUDIO (TODO)")
+        self.logger.debug("ALMACENANDO ESTUDIO (TODO)")
 
         
         model = self.lstStudyModality.model()
@@ -441,14 +474,24 @@ class PRISMTabClient(QTabWidget):
         Then, uploads it to the server.
         :return:
         '''
-        logging.debug("UPLOAD DATA")
+        self.logger.debug("UPLOAD DATA")
         self.btnNewSDIS.setDisabled(True)
         
         if not self.check_subject():
             self.btnNewSDIS.setDisabled(False)
             msgAlert = QMessageBox.warning(self, 'Carga de datos',"Sujeto debe ser agregado previamente.",QMessageBox.Ok)
             return None
-        
+
+        pubkeystr = self.client.service.handle_obtain_encryption_key()
+        if len(pubkeystr) == 0:
+            self.btnNewSDIS.setDisabled(False)
+            msgAlert = QMessageBox.warning(self, 'Carga de datos',"No se pudo obtener clave de encriptacion desde el servidor.",QMessageBox.Ok)
+            return None
+
+        self.logger.debug("Key received:"+pubkeystr)
+        newpubkey = RSA.importKey(pubkeystr)
+        cipher = PKCS1_OAEP.new(newpubkey)# ciphertext = cipher.encrypt("15340959-5")
+
         study_id = str(self.lnEdtStudyId.text())
         subject_id = str(self.lnEdtSubjectId.text())
         is_pacient = False
@@ -461,15 +504,44 @@ class PRISMTabClient(QTabWidget):
         data_source_dir = str(self.lnEdtFolderPath.text())
         package_fname=str(self.lnEdtPackageName.text())
 
-        #logging.debug("from",data_source_dir,"for study",study_id,"and subject",subject_id,"(",is_pacient,")")
+        #self.logger.debug("from",data_source_dir,"for study",study_id,"and subject",subject_id,"(",is_pacient,")")
         # get all the data inside
+        #create a temp dir to store the encrypted data
+
+        local_temp_package = "/tmp/.enc_" + package_fname
+        os.makedirs(local_temp_package)
+
         zipf = zipfile.ZipFile("/tmp/"+package_fname, "w", zipfile.ZIP_DEFLATED)
         lfiles = []
         for root, dirs, files in os.walk(data_source_dir):
             for file in files:
                 fsize=os.path.getsize(os.path.join(root, file))
-                lfiles.append( (file,fsize) )
-                zipf.write(os.path.join(root, file), 'DATA'+os.sep+file)
+                #self.logger.debug("Adding file "+os.path.join(root, file))
+
+
+                # For signals...
+                #lfiles.append((file, fsize, ()))
+                # read and de-identify dicom
+                imgObj = dcm.read_file(os.path.join(root, file))
+
+                #Only for images
+                #lfiles.append((file,fsize,{'PatientName':cipher.encrypt(imgObj.PatientName).replace("\n","JUMP").replace(",","COMMA").replace(" ","SPACE").replace(":","2DOTS"),
+                #                           'PatientID':cipher.encrypt(imgObj.PatientID).replace("\n","JUMP").replace(",","COMMA").replace(" ","SPACE").replace(":","2DOTS"),
+                #                           'PatientBirthDate':cipher.encrypt(imgObj.PatientBirthDate).replace("\n","JUMP").replace(",","COMMA").replace(" ","SPACE").replace(":","2DOTS")}))
+
+                lfiles.append((file, fsize, {'PatientName'     : base64.b64encode(cipher.encrypt(imgObj.PatientName)),
+                                             'PatientID'       : base64.b64encode(cipher.encrypt(imgObj.PatientID)),
+                                             'PatientBirthDate': base64.b64encode(cipher.encrypt(imgObj.PatientBirthDate))}))
+
+
+                imgObj.PatientName = "Anonym" #cipher.encrypt(imgObj.PatientName)
+                imgObj.PatientID = "Anonym" #cipher.encrypt(imgObj.PatientID)
+                imgObj.PatientBirthDate = "Anonym" #cipher.encrypt(imgObj.PatientBirthDate)
+                imgObj.save_as(local_temp_package + os.sep + file)
+
+                zipf.write(local_temp_package + os.sep + file, 'DATA' + os.sep + file)
+                ##zipf.write(os.path.join(root, file), 'DATA'+os.sep+file)
+                #self.logger.debug("Copying file "+"/tmp/"+package_fname+os.sep+'DATA'+os.sep+file)
 
         metainfo = open('/tmp/META.INFO','w')
         metainfo.write('1.0') # version
@@ -482,14 +554,19 @@ class PRISMTabClient(QTabWidget):
         metainfo.write('\nCAPTURE_DATE,'+capture_date)
         metainfo.write('\nLABELS,'+labels)
         metainfo.write('\nDATA:\n')
-        for f,s in lfiles:
+        for f,s, meta in lfiles:
             datatype=''
             extension = f.split(".")[-1]
             if extension in ['dcm']:
                 datatype='image'
             else:
                 datatype='signal'
-            metainfo.write('{0},{1},DATA,{2}\n'.format(datatype, s,f) )
+            metainfo.write('{0},{1},DATA,{2},'.format(datatype, s,f))
+
+            for field, enc_value in meta.items(): #ENCRYPTED FIELDS
+                metainfo.write('{0}:{1} '.format(field, enc_value))
+
+            metainfo.write('\n')
         metainfo.close()
         zipf.write('/tmp/META.INFO', 'META.INFO')
         zipf.close()
@@ -507,7 +584,7 @@ class PRISMTabClient(QTabWidget):
         pc = self.client.service.handle_capture_upload( pc )
 
         if len(pc.id) > 0:
-            logging.debug("A new Subject capture has been created ("+pc.id+")")
+            self.logger.debug("A new Subject capture has been created ("+pc.id+")")
             msgAlert = QMessageBox.information(self, 'Carga de datos',"Se registraron exitosamente los datos del sujeto en el estudio.",QMessageBox.Ok)
             #clear lineedits
             self.lnEdtStudyId.clear()
@@ -521,11 +598,11 @@ class PRISMTabClient(QTabWidget):
         id = self.lnEdtSubjectId.text()
         if len(id) == 0 or len(study_id) == 0:
             return None
-        logging.debug(id)
+        self.logger.debug(id)
         # check if subject exists
         result = self.client.service.handle_get_anonymized_subject(id)
-        logging.debug(result)
-        logging.debug(len(result))
+        self.logger.debug(result)
+        self.logger.debug(len(result))
 
         if len(result) ==  0:
             return False
@@ -536,20 +613,20 @@ class PRISMTabClient(QTabWidget):
         # otherwise ask if the user wants to create a new sibject register.
             choice = QMessageBox.question(self, 'Verificacion de sujeto',"Desea crear un nuevo registro de sujeto?",QMessageBox.Yes | QMessageBox.No)
             if choice == QMessageBox.Yes:
-                logging.debug("desplegando dialogo de creacion")
+                self.logger.debug("desplegando dialogo de creacion")
                 self.create_new_subject_dialog()
                 #sys.exit()
             else:
                 pass
         else:
-            logging.debug("OK, subject exists!")
+            self.logger.debug("OK, subject exists!")
             msgAlert = QMessageBox.information(self, 'Verificacion de sujeto',"Sujeto ya existe.",QMessageBox.Ok)
         '''
 
 
 
     def create_new_subject_dialog(self):
-        logging.debug("Opening a new popup window...")
+        self.logger.debug("Opening a new popup window...")
         self.w = QWidget()
         self.w.setGeometry(QRect(100, 100, 400, 200))
         layout = QFormLayout()
@@ -574,7 +651,7 @@ class PRISMTabClient(QTabWidget):
         QObject.connect(self.w.btnSaveSubject, SIGNAL("clicked()"), self.save_subject)
         
     def save_subject(self):
-        logging.debug("SAVING...",self.w.lnEdtSID.text())
+        self.logger.debug("SAVING...",self.w.lnEdtSID.text())
         #todo: Store to platform.
         asub = self.client.factory.create('ns0:RestAnonymizedSubject')
         asub.SID = str(self.w.lnEdtSID.text())
@@ -589,7 +666,7 @@ class PRISMTabClient(QTabWidget):
 
 
     def btngroup(self,btn):
-        logging.debug(btn.text()+" is selected")
+        self.logger.debug(btn.text()+" is selected")
         self.w.selectedGenre = btn.text()
 
 
@@ -614,8 +691,8 @@ class PRISMTabClient(QTabWidget):
         self.lnEdtStudyId.setText(id)
 
     def search_studies(self):
-        logging.debug("BUSCANDO ESTUDIOS "+self.searchLnEdt.text())
-        logging.debug(self.client)
+        self.logger.debug("BUSCANDO ESTUDIOS "+self.searchLnEdt.text())
+        self.logger.debug(self.client)
         results = self.client.service.handle_search_study_by_query(self.searchLnEdt.text())
         #print "***",results
 
@@ -673,7 +750,7 @@ class PRISMTabClient(QTabWidget):
         
         self.listData.clearContents()
         inx = 0
-        logging.debug("#Resultados:"+str(len(results[0])))
+        self.logger.debug("#Resultados:"+str(len(results[0])))
         #print results[0]
         for r in results[0]:
             data = r
@@ -691,7 +768,7 @@ class PRISMTabClient(QTabWidget):
         data = self.client.service.handle_get_SDIS_data(id)
         
         temp_output = '/tmp/_'+data.filename+'.png'
-        logging.debug("Decoding received file :"+temp_output)
+        self.logger.debug("Decoding received file :"+temp_output)
         with open(temp_output, "wb") as fh:
             fh.write(data.content.decode('base64'))
 
@@ -711,7 +788,9 @@ class PRISMTabClient(QTabWidget):
         
 
 def main():
-    logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p', filename='/tmp/prism_client.log',level=logging.DEBUG)    
+    #logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p', filename='/tmp/prism_client.log',level=self.logger.DEBUG)
+    logging.basicConfig(     datefmt='%m/%d/%Y %I:%M:%S %p')
+    logging.root.addFilter(logging.Filter(__name__))
     app = QApplication(sys.argv)
     ex = PRISMTabClient()
     ex.resize(800, 500)

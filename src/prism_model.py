@@ -55,6 +55,7 @@ class Data(odm.Document):
     parent_sdis = odm.ReferenceField(SubjectDataInStudy, required=True)
     labels = odm.ListField(odm.StringField(), default=list)
     capture_date = odm.DateTimeField(required=True)   #meta = {'allow_inheritance':True}
+    deidentified_fields = odm.DictField(default=dict())
     #meta = {'abstract':True}
 
     #def associate_to_capture(self, c):

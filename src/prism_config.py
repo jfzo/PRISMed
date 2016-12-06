@@ -1,5 +1,4 @@
 #CONFIGURATION DIRECTIVES
-import logging
 import mongoengine as odm
 
 # mongo
@@ -16,6 +15,7 @@ version=1.0
 temp_dir='/tmp'
 #data_dir='/home/juan/prism_root'
 data_dir='/tmp/prism_root'
+rsakey='/tmp/prismed_key.pem'
 
 def connect():
     #odm.connect('prism')

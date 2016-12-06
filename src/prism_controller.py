@@ -2,6 +2,11 @@
 #from wsme.types import Enum, binary
 #from wsme.types import UserType
 import os
+
+from Crypto.PublicKey import RSA
+from Crypto.Cipher import PKCS1_OAEP
+
+#from numpy.core.tests.test_numeric import sub_array
 from wsme import WSRoot, expose, validate, signature
 import prism_config as config
 from prism_util import SubjectCaptureUnpacker
@@ -381,8 +386,14 @@ class AnonymizedSubjectController:
             o.gender = sbj.first().gender
 
         return o
+
+    def get_public_key(self):
+        f = open(config.rsakey)
+        pubkey = RSA.importKey(f.read()).publickey()
+        f.close()
+        return pubkey.exportKey()
             
-            
+
         
         
         
@@ -422,7 +433,7 @@ class FrontController(WSRoot):
             self.anonymizedSubjectController = AnonymizedSubjectController()
 
 
-
+    # Recall that @signature receives the return type as 1st parameter and the function parameters next.
     @signature([RestStudy], unicode)
     def handle_search_study_by_title(self, title):
         logging.debug( "Querying db for studies matching "+title )
@@ -449,8 +460,8 @@ class FrontController(WSRoot):
         self.init()
         return self.studyController.get_modalities()
 
-    @expose(RestStudy)
-    @validate(RestStudy)
+    #@expose(RestStudy)
+    @signature(RestStudy, RestStudy)
     def handle_save_study(self, o):
         logging.debug( "received new study"+o.title )
         self.init()
@@ -459,8 +470,8 @@ class FrontController(WSRoot):
         return o
 
 
-    @expose(RestModality)
-    @validate(RestModality)
+    @signature(RestModality, RestModality)
+    #@validate(RestModality)
     def handle_save_modality(self, o):
         logging.debug( "received new modality"+o.name )
         self.init()
@@ -469,8 +480,8 @@ class FrontController(WSRoot):
         return o
 
 
-    @expose(RestAnonymizedSubject)
-    @validate(RestAnonymizedSubject)
+    @signature(RestAnonymizedSubject, RestAnonymizedSubject)
+    #@validate(RestAnonymizedSubject)
     def handle_save_anonymizedSubject(self, o):
         logging.debug( "received new anonymized subject"+o.SID )
         self.init()
@@ -505,12 +516,16 @@ class FrontController(WSRoot):
     def handle_get_SDIS_data(self, dataid):
         logging.debug( "Querying db for sdis data with id "+ dataid)
         self.init()
-        return self.sdisController.get_SDIS_data(dataid)        
+        return self.sdisController.get_SDIS_data(dataid)
+
+    @signature(unicode, unicode)
+    def handle_deidentify_subjectid(self, subjectid):
+        logging.debug("Anonymization request for subject id " + subjectid)
+        self.init()
+        return ""
 
 
-
-
-    @expose(PackageContent)
+    @signature(PackageContent)
     def newPackageContent(self):
         p = PackageContent()
         p.filename = ''
@@ -519,8 +534,8 @@ class FrontController(WSRoot):
 
 
 
-    @expose(PackageContent)
-    @validate(PackageContent)
+    @signature(PackageContent, PackageContent)
+    #@validate(PackageContent)
     def handle_capture_upload(self, o):
         logging.debug( "received "+o.filename )     
 
@@ -537,7 +552,12 @@ class FrontController(WSRoot):
 
 
 
-
+    @signature(unicode)
+    def handle_obtain_encryption_key(self):
+        self.init()
+        logging.info("Obtaining public key and returning it.")
+        key = self.anonymizedSubjectController.get_public_key()
+        return key
 
 
 
