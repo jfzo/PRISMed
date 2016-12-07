@@ -1,10 +1,8 @@
-PRISMed Qt - Client
+PRISMed - Server
 =======================
 
-Server unit of the PRISMed platform.
+Server unit of the PRISMed platform. To install just type
 
-Installing PyQt in OSX
-======================
+`python setup.py install`
 
-It is strongly recommended to install through anaconda.
 
