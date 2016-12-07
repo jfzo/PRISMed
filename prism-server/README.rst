@@ -20,7 +20,8 @@ sudo apt-get install mongodb
 ## About the RSA key generation
 
 The RSA key is generated through part of the code shown below:
-```
+
+
 from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_OAEP
 
@@ -43,4 +44,3 @@ ciphertext = cipher.encrypt("15340959-5")
 privkey = RSA.importKey(open('prismed_key.pem').read())
 cipher = PKCS1_OAEP.new(privkey)
 cipher.decrypt(ciphertext)
-```
