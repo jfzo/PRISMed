@@ -1,0 +1,32 @@
+Metadata-Version: 1.1
+Name: PRISMedS
+Version: 1.0.0.dev1
+Summary: A sample Python project
+Home-page: https://github.com/pypa/sampleproject
+Author: juan zamora
+Author-email: juan.zamora@uv.cl
+License: MIT
+Description: PRISMed Qt - Client
+        =======================
+        
+        Server unit of the PRISMed platform.
+        
+        Installing PyQt in OSX
+        ======================
+        
+        It is strongly recommended to install through anaconda.
+        
+        
+Keywords: prismed dicom
+Platform: UNKNOWN
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Developers
+Classifier: Topic :: Software Development :: Build Tools
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 2
+Classifier: Programming Language :: Python :: 2.6
+Classifier: Programming Language :: Python :: 2.7
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.3
+Classifier: Programming Language :: Python :: 3.4
+Classifier: Programming Language :: Python :: 3.5

@@ -1,0 +1,15 @@
+mongoengine
+wsme
+scipy
+zipfile
+bottle
+pydicom
+suds
+Crypto
+logging
+
+[dev]
+check-manifest
+
+[test]
+coverage
