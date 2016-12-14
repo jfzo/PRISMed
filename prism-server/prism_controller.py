@@ -35,14 +35,14 @@ class RestStudy(object):
     id = unicode
     title = unicode
     #date_added = unicode
-    metadata = unicode
+    description = unicode
     physiological_st = unicode
     data_type_in_study = unicode
     modalities = unicode # comma separated list of strings
 
     def __repr__(self):
         return "RestStudy(%s, %s, %s, %s, %s, %s)" % (
-            self.id, self.title, self.metadata, self.physiological_st, self.data_type_in_study, self.modalities
+            self.id, self.title, self.description, self.physiological_st, self.data_type_in_study, self.modalities
         )
         
 class RestAnonymizedSubject(object):
@@ -267,7 +267,7 @@ class StudyController:
             news.id = str(s.id)
             news.title = s.title
             #news.date_added = 
-            news.metadata = s.metadata
+            news.description = s.description
             news.physiological_st = s.physiological_st.name
             news.data_type_in_study = s.data_type_in_study
             news.modalities = '/'.join( x.name for x in s.modalities)
@@ -289,7 +289,7 @@ class StudyController:
                 news.id = str(s.in_study.id)
                 news.title = s.in_study.title
                 # news.date_added =
-                news.metadata = s.in_study.metadata
+                news.description = s.in_study.description
                 news.physiological_st = s.in_study.physiological_st.name
                 news.data_type_in_study = s.in_study.data_type_in_study
                 news.modalities = '/'.join(x.name for x in s.in_study.modalities)
@@ -344,7 +344,7 @@ class StudyController:
             phy_obj = PhysiologicalStructure(name=s.physiological_st).save()
 
         today = datetime.fromtimestamp(time.time())
-        st = Study(title=s.title, date_added=today, metadata=s.metadata, physiological_st=phy_obj, data_type_in_study=s.data_type_in_study, modalities=lMods).save()
+        st = Study(title=s.title, date_added=today, description=s.description, physiological_st=phy_obj, data_type_in_study=s.data_type_in_study, modalities=lMods).save()
         logging.debug("...id assigned "+str(st.id))
 
         return str(st.id)

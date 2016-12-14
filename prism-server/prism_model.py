@@ -23,9 +23,9 @@ class Modality(odm.Document):
     information = odm.StringField(max_length=100)
 
 class Study(odm.Document):
-    title = odm.StringField(max_length=50, required=True)
+    title = odm.StringField(max_length=100, required=True)
     date_added = odm.DateTimeField(required=True)
-    metadata = odm.StringField(max_length=100)    
+    description = odm.StringField(max_length=1000)    
     physiological_st = odm.ReferenceField(PhysiologicalStructure)
     data_type_in_study = odm.StringField(max_length=50, required=True)#eventually isolate
     modalities = odm.ListField(odm.ReferenceField(Modality), default=list)
