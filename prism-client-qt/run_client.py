@@ -118,6 +118,8 @@ class PRISMTabClient(QTabWidget):
                 self.logger.debug("Tab de SubjectDataInStudy")
             elif selected_index == self.index_tab_load_data:
                 self.logger.debug("Tab de carga de datos")
+                self.captureDate = self.calCaptureDate.selectedDate().toString(Qt.ISODate)
+                self.logger.debug("Fecha seleccionada inicialmente: " + self.captureDate)
  
             
         
@@ -343,8 +345,8 @@ class PRISMTabClient(QTabWidget):
         layout.addRow("Fecha de captura", self.calCaptureDate)
 
 
-        self.captureDate = self.calCaptureDate.selectedDate().toString()
-
+        #self.captureDate = self.calCaptureDate.selectedDate().toString(Qt.ISODate)
+        #self.logger.debug("Fecha seleccionada inicialmente: "+self.captureDate)
 
         self.lblLabels = QLineEdit()
         layout.addRow("Etiquetas", self.lblLabels)
@@ -361,7 +363,7 @@ class PRISMTabClient(QTabWidget):
         self.lnEdtPackageName = QLineEdit()
         self.lnEdtPackageName.setFixedWidth(400)
         self.lnEdtPackageName.setText(str(datetime.fromtimestamp(time.time()) ).replace(" ","_").replace(":","_"))
-        layout.addRow("Nombre del paquete a enviar:", self.lnEdtPackageName)
+        #layout.addRow("Nombre del paquete a enviar:", self.lnEdtPackageName) # INNECESARIO
 
         self.btnNewSDIS = QPushButton("Cargar datos")
         layout.addRow(self.btnNewSDIS )
