@@ -185,7 +185,7 @@ class PRISMTabClient(QTabWidget):
         self.cmbStudyPhySt.addItem("corazón".decode("UTF-8"))
 
         self.cmbStudyDatatype = QComboBox() # self.cb.currentText()
-        self.cmbStudyDatatype.addItem("imágen".decode("UTF-8"))
+        self.cmbStudyDatatype.addItem("imagen".decode("UTF-8"))
         self.cmbStudyDatatype.addItem("señal".decode("UTF-8"))
         self.cmbStudyDatatype.addItem("imágen+señal".decode("UTF-8"))
         self.btnStudyNewModality = QPushButton("Nueva modalidad")
@@ -193,8 +193,8 @@ class PRISMTabClient(QTabWidget):
         #self.update_modality_list()
 
             
-        layout.addRow("Titulo", self.lnEdtStudyTitle)
-        layout.addRow("Descripción".decode("UTF-8"), self.txtEdtStudyDescription)
+        layout.addRow("Titulo".decode("UTF-8"),, self.lnEdtStudyTitle)
+        layout.addRow("Descripción".decoe("UTF-8"), self.txtEdtStudyDescription)
         layout.addRow("Estructura fisiológica".decode("UTF-8"), self.cmbStudyPhySt)
 
         layout.addRow("Tipo(s) de dato(s) en el estudio", self.cmbStudyDatatype )
