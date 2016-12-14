@@ -179,19 +179,24 @@ class PRISMTabClient(QTabWidget):
         
         self.lnEdtStudyTitle = QLineEdit()
         self.txtEdtStudyDescription = QTextEdit() #.toPlainText()
-        self.lnEdtStudyPhySt = QLineEdit()
+
+        self.cmbStudyPhySt = QComboBox()
+        self.cmbStudyPhySt.addItem("cerebro".decode("UTF-8"))
+        self.cmbStudyPhySt.addItem("corazón".decode("UTF-8"))
+
         self.cmbStudyDatatype = QComboBox() # self.cb.currentText()
-        self.cmbStudyDatatype.addItem("image")
-        self.cmbStudyDatatype.addItem("signal")
-        self.cmbStudyDatatype.addItem("image+signal")
+        self.cmbStudyDatatype.addItem("imágen".decode("UTF-8"))
+        self.cmbStudyDatatype.addItem("señal".decode("UTF-8"))
+        self.cmbStudyDatatype.addItem("imágen+señal".decode("UTF-8"))
         self.btnStudyNewModality = QPushButton("Nueva modalidad")
         self.lstStudyModality = QListView()
         #self.update_modality_list()
 
             
         layout.addRow("Titulo", self.lnEdtStudyTitle)
-        layout.addRow("Metadatos", self.txtEdtStudyDescription)
-        layout.addRow("Estructura fisiologica", self.lnEdtStudyPhySt)
+        layout.addRow("Descripción".decode("UTF-8"), self.txtEdtStudyDescription)
+        layout.addRow("Estructura fisiológica".decode("UTF-8"), self.cmbStudyPhySt)
+
         layout.addRow("Tipo(s) de dato(s) en el estudio", self.cmbStudyDatatype )
         hbox = QHBoxLayout()
         hbox.addWidget(self.lstStudyModality)
@@ -453,10 +458,18 @@ class PRISMTabClient(QTabWidget):
         modalities = ','.join(modalities)
 
         p = self.client.factory.create('ns0:RestStudy')
-        p.title = str(self.lnEdtStudyTitle.text().toUtf8())
-        p.description = str(self.txtEdtStudyDescription.toPlainText().toUtf8())
-        p.physiological_st = str(self.lnEdtStudyPhySt.text().toUtf8())
-        p.data_type_in_study = str(self.cmbStudyDatatype.currentText() )
+        p.title = str(self.lnEdtStudyTitle.text().toUtf8()).decode("UTF-8").lower()
+        p.description = str(self.txtEdtStudyDescription.toPlainText().toUtf8()).decode("UTF-8").lower()
+        p.physiological_st = str(self.cmbStudyPhySt.currentText().toUtf8() ).decode("UTF-8").lower()
+        p.data_type_in_study = str(self.cmbStudyDatatype.currentText().toUtf8() ).decode("UTF-8").lower()
+
+
+        ### Reocrdar que estos campos tienen impact en el nombre de las carpetas y no siempre el sistema de archivos acepta caracteres 'raros'
+        self.logger.debug("Cambiando "+p.data_type_in_study)
+        p.data_type_in_study = p.data_type_in_study.replace('imágen'.decode("UTF-8"),'image').replace('señal'.decode("UTF-8"),'signal')
+        self.logger.debug("... por " + p.data_type_in_study)
+        ###
+
         p.modalities=modalities
 
         p = self.client.service.handle_save_study(p) # updated with the ID
@@ -464,6 +477,11 @@ class PRISMTabClient(QTabWidget):
     
         if len(study_id ) > 0:
             msgAlert = QMessageBox.information(self, 'Creacion de estudio',"Estudio almacenado exitosamente.",QMessageBox.Ok)
+            self.lnEdtStudyTitle.clear()
+            self.txtEdtStudyDescription.clear()
+            #self.cmbStudyPhySt.clear()
+            self.update_modality_list()
+
         else:
             msgAlert = QMessageBox.warning(self, 'Creacion de estudio',"Estudio no pudo ser almacenado.",QMessageBox.Ok)
 
@@ -693,7 +711,7 @@ class PRISMTabClient(QTabWidget):
     def search_studies(self):
         self.logger.debug("BUSCANDO ESTUDIOS "+self.searchLnEdt.text().toUtf8())
         self.logger.debug(self.client)
-        results = self.client.service.handle_search_study_by_query(self.searchLnEdt.text().toUtf8())
+        results = self.client.service.handle_search_study_by_query(str(self.searchLnEdt.text().toUtf8()).decode("UTF-8") )
         #print "***",results
 
         self.lResultStudies = []
