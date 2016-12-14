@@ -648,7 +648,7 @@ class PRISMTabClient(QTabWidget):
         self.w = QWidget()
         self.w.setGeometry(QRect(100, 100, 400, 200))
         layout = QFormLayout()
-        self.w.lnEdtSID = QLabel(self.lnEdtSubjectId.text().toUtf8())
+        self.w.lnEdtSID = QLabel(self.lnEdtSubjectId.text())
         layout.addRow("ID de Sujeto anonimizado:", self.w.lnEdtSID)
         self.w.bg = QButtonGroup()
         self.w.b1 = QCheckBox("H")
