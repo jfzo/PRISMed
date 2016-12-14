@@ -126,8 +126,8 @@ class PRISMTabClient(QTabWidget):
         CONNECT TO THE SERVER
         '''
         self.connected_ok = False
-        self.bind_address = str(self.lnEdtServerAddress.text())
-        self.bind_port = str(self.lnEdtServerPort.text())
+        self.bind_address = str(self.lnEdtServerAddress.text().toUtf8())
+        self.bind_port = str(self.lnEdtServerPort.text().toUtf8())
         
         url = 'http://'+self.bind_address+':'+str(self.bind_port)+'/prism/api.wsdl'
         self.logger.debug("Connecting to URL:"+ url)
@@ -178,7 +178,7 @@ class PRISMTabClient(QTabWidget):
         #self.tab_search_study.setLayout(layout)
         
         self.lnEdtStudyTitle = QLineEdit()
-        self.txtEdtStudyMetadata = QTextEdit() #.toPlainText()
+        self.txtEdtStudyDescription = QTextEdit() #.toPlainText()
         self.lnEdtStudyPhySt = QLineEdit()
         self.cmbStudyDatatype = QComboBox() # self.cb.currentText()
         self.cmbStudyDatatype.addItem("image")
@@ -190,7 +190,7 @@ class PRISMTabClient(QTabWidget):
 
             
         layout.addRow("Titulo", self.lnEdtStudyTitle)
-        layout.addRow("Metadatos", self.txtEdtStudyMetadata)
+        layout.addRow("Metadatos", self.txtEdtStudyDescription)
         layout.addRow("Estructura fisiologica", self.lnEdtStudyPhySt)
         layout.addRow("Tipo(s) de dato(s) en el estudio", self.cmbStudyDatatype )
         hbox = QHBoxLayout()
@@ -422,8 +422,8 @@ class PRISMTabClient(QTabWidget):
         QObject.connect(self.new_mod.btnModalitySave, SIGNAL("clicked()"), self.save_modality)
         
     def save_modality(self):
-        modalityName = str(self.new_mod.lnEdtModalityName.text())
-        modalityInfo = str(self.new_mod.txtEdtModalityInfo.toPlainText())
+        modalityName = str(self.new_mod.lnEdtModalityName.text().toUtf8())
+        modalityInfo = str(self.new_mod.txtEdtModalityInfo.toPlainText().toUtf8())
         self.logger.debug("SAVING..."+modalityName+" with info "+modalityInfo)
         #todo: Store to platform.
         asub = self.client.factory.create('ns0:RestModality')
@@ -448,14 +448,14 @@ class PRISMTabClient(QTabWidget):
         i = 0
         while model.item(i):
             if model.item(i).checkState():
-                modalities.append( str(model.item(i).text()) )
+                modalities.append( str(model.item(i).text().toUtf8()) )
             i += 1
         modalities = ','.join(modalities)
 
         p = self.client.factory.create('ns0:RestStudy')
-        p.title = str(self.lnEdtStudyTitle.text())
-        p.metadata = str(self.txtEdtStudyMetadata.toPlainText())
-        p.physiological_st = str(self.lnEdtStudyPhySt.text())
+        p.title = str(self.lnEdtStudyTitle.text().toUtf8())
+        p.description = str(self.txtEdtStudyDescription.toPlainText().toUtf8())
+        p.physiological_st = str(self.lnEdtStudyPhySt.text().toUtf8())
         p.data_type_in_study = str(self.cmbStudyDatatype.currentText() )
         p.modalities=modalities
 
@@ -492,17 +492,17 @@ class PRISMTabClient(QTabWidget):
         newpubkey = RSA.importKey(pubkeystr)
         cipher = PKCS1_OAEP.new(newpubkey)# ciphertext = cipher.encrypt("15340959-5")
 
-        study_id = str(self.lnEdtStudyId.text())
-        subject_id = str(self.lnEdtSubjectId.text())
+        study_id = str(self.lnEdtStudyId.text().toUtf8())
+        subject_id = str(self.lnEdtSubjectId.text().toUtf8())
         is_pacient = False
         capture_date =  self.captureDate # formato YYYY-MM-DD
 
-        labels =  str(self.lblLabels.text())
+        labels =  str(self.lblLabels.text().toUtf8())
 
         if self.chkIsPacient.isChecked():
             is_pacient = True
-        data_source_dir = str(self.lnEdtFolderPath.text())
-        package_fname=str(self.lnEdtPackageName.text())
+        data_source_dir = str(self.lnEdtFolderPath.text().toUtf8())
+        package_fname=str(self.lnEdtPackageName.text().toUtf8())
 
         #self.logger.debug("from",data_source_dir,"for study",study_id,"and subject",subject_id,"(",is_pacient,")")
         # get all the data inside
@@ -594,8 +594,8 @@ class PRISMTabClient(QTabWidget):
         self.btnNewSDIS.setDisabled(False)
 
     def check_subject(self):
-        study_id = self.lnEdtStudyId.text()
-        id = self.lnEdtSubjectId.text()
+        study_id = self.lnEdtStudyId.text().toUtf8()
+        id = self.lnEdtSubjectId.text().toUtf8()
         if len(id) == 0 or len(study_id) == 0:
             return None
         self.logger.debug(id)
@@ -630,7 +630,7 @@ class PRISMTabClient(QTabWidget):
         self.w = QWidget()
         self.w.setGeometry(QRect(100, 100, 400, 200))
         layout = QFormLayout()
-        self.w.lnEdtSID = QLabel(self.lnEdtSubjectId.text())
+        self.w.lnEdtSID = QLabel(self.lnEdtSubjectId.text().toUtf8())
         layout.addRow("ID de Sujeto anonimizado:", self.w.lnEdtSID)
         self.w.bg = QButtonGroup()
         self.w.b1 = QCheckBox("H")
@@ -651,10 +651,10 @@ class PRISMTabClient(QTabWidget):
         QObject.connect(self.w.btnSaveSubject, SIGNAL("clicked()"), self.save_subject)
         
     def save_subject(self):
-        self.logger.debug("SAVING...",self.w.lnEdtSID.text())
+        self.logger.debug("SAVING...",self.w.lnEdtSID.text().toUtf8())
         #todo: Store to platform.
         asub = self.client.factory.create('ns0:RestAnonymizedSubject')
-        asub.SID = str(self.w.lnEdtSID.text())
+        asub.SID = str(self.w.lnEdtSID.text().toUtf8())
         asub.gender = str(self.w.selectedGenre)
         asub = self.client.service.handle_save_anonymizedSubject(asub)
 
@@ -666,8 +666,8 @@ class PRISMTabClient(QTabWidget):
 
 
     def btngroup(self,btn):
-        self.logger.debug(btn.text()+" is selected")
-        self.w.selectedGenre = btn.text()
+        self.logger.debug(btn.text().toUtf8()+" is selected")
+        self.w.selectedGenre = btn.text().toUtf8()
 
 
     def get_folder(self):
@@ -678,8 +678,8 @@ class PRISMTabClient(QTabWidget):
     def switch_to_sdis_tab(self):
         self.setCurrentIndex(self.index_tab_sdis)
 
-        sdis_id = str(self.listSDIS.item(self.listSDIS.currentRow(), 0).text())
-        sdis_subject = str(self.listSDIS.item(self.listSDIS.currentRow(), 1).text())
+        sdis_id = str(self.listSDIS.item(self.listSDIS.currentRow(), 0).text().toUtf8())
+        sdis_subject = str(self.listSDIS.item(self.listSDIS.currentRow(), 1).text().toUtf8())
 
         self.tab2_lnEdtSubject.setText(sdis_subject)
         self.lnEdtSDIS.setText(sdis_id)
@@ -691,9 +691,9 @@ class PRISMTabClient(QTabWidget):
         self.lnEdtStudyId.setText(id)
 
     def search_studies(self):
-        self.logger.debug("BUSCANDO ESTUDIOS "+self.searchLnEdt.text())
+        self.logger.debug("BUSCANDO ESTUDIOS "+self.searchLnEdt.text().toUtf8())
         self.logger.debug(self.client)
-        results = self.client.service.handle_search_study_by_query(self.searchLnEdt.text())
+        results = self.client.service.handle_search_study_by_query(self.searchLnEdt.text().toUtf8())
         #print "***",results
 
         self.lResultStudies = []
@@ -737,7 +737,7 @@ class PRISMTabClient(QTabWidget):
     def get_data_from_sdis(self):
         self.listData.clearContents()
         self.listData.setRowCount(0)
-        id = self.lnEdtSDIS.text()
+        id = self.lnEdtSDIS.text().toUtf8()
 
 
         oSDIS = self.client.service.handle_get_SDIS(id)
@@ -763,7 +763,7 @@ class PRISMTabClient(QTabWidget):
             inx+=1
 
     def show_selection_in_sdis(self, index):
-        id = str(self.listData.item(index.row(), 0).text())
+        id = str(self.listData.item(index.row(), 0).text().toUtf8())
         #msgAlert = QMessageBox.information(self, 'Dato de sujeto',"Mostrando item "+str(index.row())+" - "+ id,QMessageBox.Ok)
         data = self.client.service.handle_get_SDIS_data(id)
         
