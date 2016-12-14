@@ -653,15 +653,15 @@ class PRISMTabClient(QTabWidget):
         self.w.lnEdtSID = QLabel(self.lnEdtSubjectId.text())
         layout.addRow("ID de Sujeto anonimizado:", self.w.lnEdtSID)
         self.w.bg = QButtonGroup()
-        self.w.b1 = QCheckBox("H")
-        self.w.b2 = QCheckBox("M")
+        self.w.b1 = QCheckBox("M")
+        self.w.b2 = QCheckBox("F")
         self.w.bg.addButton(self.w.b1,1)
         self.w.bg.addButton(self.w.b2,2)
         self.w.selectedGenre = ''
         hbox = QHBoxLayout()
         hbox.addWidget(self.w.b1)
         hbox.addWidget(self.w.b2)
-        layout.addRow("Genero:", hbox)
+        layout.addRow("Género:".decode("UTF-8"), hbox)
         
         self.w.btnSaveSubject = QPushButton("Registrar sujeto")
         layout.addRow(self.w.btnSaveSubject)
