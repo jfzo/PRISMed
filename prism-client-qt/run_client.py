@@ -193,8 +193,8 @@ class PRISMTabClient(QTabWidget):
         #self.update_modality_list()
 
             
-        layout.addRow("Titulo".decode("UTF-8"),, self.lnEdtStudyTitle)
-        layout.addRow("Descripción".decoe("UTF-8"), self.txtEdtStudyDescription)
+        layout.addRow("Titulo".decode("UTF-8"), self.lnEdtStudyTitle)
+        layout.addRow("Descripción".decde("UTF-8"), self.txtEdtStudyDescription)
         layout.addRow("Estructura fisiológica".decode("UTF-8"), self.cmbStudyPhySt)
 
         layout.addRow("Tipo(s) de dato(s) en el estudio", self.cmbStudyDatatype )
