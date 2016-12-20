@@ -153,8 +153,19 @@ class SDISController:
             #logging.debug( d )
             d.parent_sdis = sdis
             d.location = locpath
+
+
+
             # move file packedContentPath/filename to d.location/d.filename
             from_path = packedContentPath + os.sep + 'DATA' + os.sep + d.filename
+
+            # change filename to a generic one given by the datetime
+            # get the extension and appendit to the generated filename
+            extension = d.filename.split('.')[-1]
+            newfilename = str(datetime.fromtimestamp(time.time())).replace(" ", "_").replace(":", "_") + "." + extension
+            logging.debug("Filename change from " + d.filename + " to " + newfilename)
+            d.filename = newfilename
+
             dest_path = d.location + os.sep + d.filename
             #logging.debug("Moving from "+ from_path +" to "+ dest_path)
             os.rename(from_path, dest_path) 
@@ -375,6 +386,8 @@ class AnonymizedSubjectController:
 
     def store_subject(self, o):
         sbj = AnonymizedSubject(SID=o.SID, gender=o.gender).save()
+        sbj.SID = str(sbj.id)
+        sbj.save()
         return str(sbj.id)
 
     def get_subject(self, sid):
@@ -483,10 +496,11 @@ class FrontController(WSRoot):
     @signature(RestAnonymizedSubject, RestAnonymizedSubject)
     #@validate(RestAnonymizedSubject)
     def handle_save_anonymizedSubject(self, o):
-        logging.debug( "received new anonymized subject"+o.SID )
+        logging.debug( "received new anonymized subject" )
         self.init()
         id = self.anonymizedSubjectController.store_subject(o)
         o.id = id
+        o.SID = id
         return o
 
     @signature(RestAnonymizedSubject, unicode)

@@ -273,6 +273,9 @@ class PRISMTabClient(QTabWidget):
         layout.addRow("", self.btnToSDIS)
         QObject.connect(self.btnToSDIS, SIGNAL("clicked()"), self.switch_to_sdis_tab)
 
+        self.btnToLoadSDIS = QPushButton("Cargar datos de sujeto seleccionado en el estudio")
+        layout.addRow("", self.btnToLoadSDIS)
+        QObject.connect(self.btnToLoadSDIS, SIGNAL("clicked()"), self.switch_to_loadsdis_tab)
 
 
         # ACTIONS
@@ -329,6 +332,7 @@ class PRISMTabClient(QTabWidget):
         hbox = QHBoxLayout()
         self.lnEdtSubjectId = QLineEdit()
         self.lnEdtSubjectId.setFixedWidth(280)
+        self.lnEdtSubjectId.setDisabled(True)
 
         self.btnCheckSubject = QPushButton("Agregar sujeto")
         hbox.addWidget(self.lnEdtSubjectId)
@@ -348,37 +352,80 @@ class PRISMTabClient(QTabWidget):
         #self.captureDate = self.calCaptureDate.selectedDate().toString(Qt.ISODate)
         #self.logger.debug("Fecha seleccionada inicialmente: "+self.captureDate)
 
-        self.lblLabels = QLineEdit()
-        layout.addRow("Etiquetas", self.lblLabels)
+        #self.lblLabels = QLineEdit()
+        #layout.addRow("Etiquetas", self.lblLabels)
 
 
-        hbox = QHBoxLayout()
-        self.lnEdtFolderPath = QLineEdit()
-        self.btnSelectFolder = QPushButton("Seleccionar carpeta")
-        hbox.addWidget(self.lnEdtFolderPath)
-        hbox.addWidget(self.btnSelectFolder)
+        #hbox = QHBoxLayout()
+        #self.lnEdtFolderPath = QLineEdit()
+        #self.btnSelectFolder = QPushButton("Seleccionar carpeta")
+        #hbox.addWidget(self.lnEdtFolderPath)
+        #hbox.addWidget(self.btnSelectFolder)
         
-        layout.addRow("Ubicacion de carpeta de datos:", hbox)
+        #layout.addRow("Ubicacion de carpeta de datos:", hbox)
 
-        self.lnEdtPackageName = QLineEdit()
-        self.lnEdtPackageName.setFixedWidth(400)
-        self.lnEdtPackageName.setText(str(datetime.fromtimestamp(time.time()) ).replace(" ","_").replace(":","_"))
+        #self.lnEdtPackageName = QLineEdit()
+        #self.lnEdtPackageName.setFixedWidth(400)
+        #self.lnEdtPackageName.setText(str(datetime.fromtimestamp(time.time()) ).replace(" ","_").replace(":","_"))
         #layout.addRow("Nombre del paquete a enviar:", self.lnEdtPackageName) # INNECESARIO
 
-        self.btnNewSDIS = QPushButton("Cargar datos")
-        layout.addRow(self.btnNewSDIS )
 
         self.setTabText(self.index_tab_load_data, "Carga de Datos")
         self.tab_load_data.setLayout(layout)
 
-        QObject.connect(self.btnSelectFolder, SIGNAL("clicked()"), self.get_folder)
+        ####
+        self.inputWidgetArray = []
+        self.dynamicGrid = QGridLayout()
+
+        self.btnNewInput = QPushButton("+")
+        layout.addRow(self.btnNewInput)
+
+        # adding new component
+        '''
+        self.inputWidgetArray.append( {'lnEdtFolderPath':QLineEdit(), 'btnSelectFolder':QPushButton("Seleccionar carpeta"), 'lblLabels':QLineEdit()} )
+        self.dynamicGrid.addWidget(QLabel("Ubicacion de carpeta de datos:"), 0, 0)
+        self.dynamicGrid.addWidget(self.inputWidgetArray[0]['lnEdtFolderPath'], 0, 1)
+        self.dynamicGrid.addWidget(self.inputWidgetArray[0]['btnSelectFolder'], 0, 2)
+        self.dynamicGrid.addWidget(QLabel("Etiquetas:"), 1, 0)
+        self.dynamicGrid.addWidget(self.inputWidgetArray[0]['lblLabels'], 1, 1)
+        '''
+        layout.addRow(self.dynamicGrid)
+
+        self.btnNewSDIS = QPushButton("Cargar datos")
+        layout.addRow(self.btnNewSDIS)
+
+
+        #QObject.connect(self.btnSelectFolder, SIGNAL("clicked()"), self.get_folder)
         #QObject.connect(self.btnCheckSubject, SIGNAL("clicked()"), self.check_subject)self.create_new_subject_dialog()
         QObject.connect(self.btnCheckSubject, SIGNAL("clicked()"), self.create_new_subject_dialog)
         QObject.connect(self.btnNewSDIS, SIGNAL("clicked()"), self.upload_sdis)
+        QObject.connect(self.btnNewInput, SIGNAL("clicked()"), self.add_new_folder_input)
+
 
     '''
     Functions
     '''
+
+    def add_new_folder_input(self):
+        n = len(self.inputWidgetArray)
+        N = n * 2
+
+        self.inputWidgetArray.append(
+            {'lnEdtFolderPath': QLineEdit(), 'btnSelectFolder': QPushButton("Seleccionar carpeta"),
+             'lblLabels': QLineEdit(), 'lnEdtPackageName': QLineEdit()})
+        package_name = str(datetime.fromtimestamp(time.time())).replace(" ", "_").replace(":", "_")
+        self.inputWidgetArray[n]['lnEdtPackageName'].setText(package_name)
+
+        self.logger.debug("Nuevo package name: "+package_name)
+
+        self.dynamicGrid.addWidget(QLabel("Ubicacion de carpeta de datos:"), N, 0)
+        self.dynamicGrid.addWidget(self.inputWidgetArray[n]['lnEdtFolderPath'], N, 1)
+        self.dynamicGrid.addWidget(self.inputWidgetArray[n]['btnSelectFolder'], N, 2)
+        self.dynamicGrid.addWidget(QLabel("Etiquetas:"), N+1, 0)
+        self.dynamicGrid.addWidget(self.inputWidgetArray[n]['lblLabels'], N+1, 1)
+
+        QObject.connect(self.inputWidgetArray[n]['btnSelectFolder'], SIGNAL("clicked()"), lambda index=n: self.get_folder(index))
+
 
     def showDate(self, date):
         self.captureDate = date.toString(Qt.ISODate) # formato YYYY-MM-DD
@@ -515,103 +562,143 @@ class PRISMTabClient(QTabWidget):
         study_id = str(self.lnEdtStudyId.text().toUtf8())
         subject_id = str(self.lnEdtSubjectId.text().toUtf8())
         is_pacient = False
-        capture_date =  self.captureDate # formato YYYY-MM-DD
-
-        labels =  str(self.lblLabels.text().toUtf8())
-
-        if self.chkIsPacient.isChecked():
-            is_pacient = True
-        data_source_dir = str(self.lnEdtFolderPath.text().toUtf8())
-        package_fname=str(self.lnEdtPackageName.text().toUtf8())
-
-        #self.logger.debug("from",data_source_dir,"for study",study_id,"and subject",subject_id,"(",is_pacient,")")
-        # get all the data inside
-        #create a temp dir to store the encrypted data
-
-        local_temp_package = "/tmp/.enc_" + package_fname
-        os.makedirs(local_temp_package)
-
-        zipf = zipfile.ZipFile("/tmp/"+package_fname, "w", zipfile.ZIP_DEFLATED)
-        lfiles = []
-        for root, dirs, files in os.walk(data_source_dir):
-            for file in files:
-                fsize=os.path.getsize(os.path.join(root, file))
-                #self.logger.debug("Adding file "+os.path.join(root, file))
+        capture_date = self.captureDate # formato YYYY-MM-DD
 
 
-                # For signals...
-                #lfiles.append((file, fsize, ()))
-                # read and de-identify dicom
-                imgObj = dcm.read_file(os.path.join(root, file))
+        # Traverse the list of input boxes
+        packages_to_upload = list()
+        for package_input in self.inputWidgetArray:
 
-                #Only for images
-                #lfiles.append((file,fsize,{'PatientName':cipher.encrypt(imgObj.PatientName).replace("\n","JUMP").replace(",","COMMA").replace(" ","SPACE").replace(":","2DOTS"),
-                #                           'PatientID':cipher.encrypt(imgObj.PatientID).replace("\n","JUMP").replace(",","COMMA").replace(" ","SPACE").replace(":","2DOTS"),
-                #                           'PatientBirthDate':cipher.encrypt(imgObj.PatientBirthDate).replace("\n","JUMP").replace(",","COMMA").replace(" ","SPACE").replace(":","2DOTS")}))
+            #each item is a dict with keys: 'lnEdtFolderPath': QLineEdit(), 'btnSelectFolder': QPushButton, 'lblLabels': QLineEdit(), 'lnEdtPackageName': QLineEdit()}
 
-                lfiles.append((file, fsize, {'PatientName'     : base64.b64encode(cipher.encrypt(imgObj.PatientName)),
-                                             'PatientID'       : base64.b64encode(cipher.encrypt(imgObj.PatientID)),
-                                             'PatientBirthDate': base64.b64encode(cipher.encrypt(imgObj.PatientBirthDate))}))
+            labels = str(package_input['lblLabels'].text().toUtf8())
+
+            if self.chkIsPacient.isChecked():
+                is_pacient = True
+            data_source_dir = str(package_input['lnEdtFolderPath'].text().toUtf8())
+            package_fname = str(package_input['lnEdtPackageName'].text().toUtf8())
+
+            #self.logger.debug("from",data_source_dir,"for study",study_id,"and subject",subject_id,"(",is_pacient,")")
+            # get all the data inside
+            #create a temp dir to store the encrypted data
+
+            local_temp_package = "/tmp/.enc_" + package_fname
+            os.makedirs(local_temp_package)
+
+            zipf = zipfile.ZipFile("/tmp/"+package_fname, "w", zipfile.ZIP_DEFLATED)
+            lfiles = []
+            for root, dirs, files in os.walk(data_source_dir):
+                for file in files:
+                    if not file.endswith('.dcm') and file.startswith('.'):
+                        continue
+
+                    if file.endswith('.dcm'):
+                        fsize=os.path.getsize(os.path.join(root, file))
+                        #self.logger.debug("Adding file "+os.path.join(root, file))
+
+                        self.logger.debug("Storing "+root+" "+file)
+                        # For signals...
+                        #lfiles.append((file, fsize, ()))
+                        # read and de-identify dicom
+                        imgObj = dcm.read_file(os.path.join(root, file))
+
+                        #Only for images
+                        #lfiles.append((file,fsize,{'PatientName':cipher.encrypt(imgObj.PatientName).replace("\n","JUMP").replace(",","COMMA").replace(" ","SPACE").replace(":","2DOTS"),
+                        #                           'PatientID':cipher.encrypt(imgObj.PatientID).replace("\n","JUMP").replace(",","COMMA").replace(" ","SPACE").replace(":","2DOTS"),
+                        #                           'PatientBirthDate':cipher.encrypt(imgObj.PatientBirthDate).replace("\n","JUMP").replace(",","COMMA").replace(" ","SPACE").replace(":","2DOTS")}))
+
+                        lfiles.append((file, fsize, {'PatientName'     : base64.b64encode(cipher.encrypt(imgObj.PatientName)),
+                                                     'PatientID'       : base64.b64encode(cipher.encrypt(imgObj.PatientID)),
+                                                     'PatientBirthDate': base64.b64encode(cipher.encrypt(imgObj.PatientBirthDate))}))
 
 
-                imgObj.PatientName = "Anonym" #cipher.encrypt(imgObj.PatientName)
-                imgObj.PatientID = "Anonym" #cipher.encrypt(imgObj.PatientID)
-                imgObj.PatientBirthDate = "Anonym" #cipher.encrypt(imgObj.PatientBirthDate)
-                imgObj.save_as(local_temp_package + os.sep + file)
+                        imgObj.PatientName = "Anonym" #cipher.encrypt(imgObj.PatientName)
+                        imgObj.PatientID = "Anonym" #cipher.encrypt(imgObj.PatientID)
+                        imgObj.PatientBirthDate = "Anonym" #cipher.encrypt(imgObj.PatientBirthDate)
+                        imgObj.save_as(local_temp_package + os.sep + file)
 
-                zipf.write(local_temp_package + os.sep + file, 'DATA' + os.sep + file)
-                ##zipf.write(os.path.join(root, file), 'DATA'+os.sep+file)
-                #self.logger.debug("Copying file "+"/tmp/"+package_fname+os.sep+'DATA'+os.sep+file)
+                    zipf.write(local_temp_package + os.sep + file, 'DATA' + os.sep + file)
+                    ##zipf.write(os.path.join(root, file), 'DATA'+os.sep+file)
+                    #self.logger.debug("Copying file "+"/tmp/"+package_fname+os.sep+'DATA'+os.sep+file)
 
-        metainfo = open('/tmp/META.INFO','w')
-        metainfo.write('1.0') # version
-        metainfo.write('\nSTUDY,'+study_id) # study id
-        metainfo.write('\nSUBJECT,'+subject_id) # anonymized_subject id
-        if is_pacient: # Writes if it's pacient or just subject.
-            metainfo.write('\nP')
-        else:
-            metainfo.write('\nNO_P')
-        metainfo.write('\nCAPTURE_DATE,'+capture_date)
-        metainfo.write('\nLABELS,'+labels)
-        metainfo.write('\nDATA:\n')
-        for f,s, meta in lfiles:
-            datatype=''
-            extension = f.split(".")[-1]
-            if extension in ['dcm']:
-                datatype='image'
+            metainfo = open('/tmp/META.INFO','w')
+            metainfo.write('1.0') # version
+            metainfo.write('\nSTUDY,'+study_id) # study id
+            metainfo.write('\nSUBJECT,'+subject_id) # anonymized_subject id
+            if is_pacient: # Writes if it's pacient or just subject.
+                metainfo.write('\nP')
             else:
-                datatype='signal'
-            metainfo.write('{0},{1},DATA,{2},'.format(datatype, s,f))
+                metainfo.write('\nNO_P')
+            metainfo.write('\nCAPTURE_DATE,'+capture_date)
+            metainfo.write('\nLABELS,'+labels)
+            metainfo.write('\nDATA:\n')
+            for f,s, meta in lfiles:
+                datatype=''
+                extension = f.split(".")[-1]
+                if extension in ['dcm']:
+                    datatype='image'
+                else:
+                    datatype='signal'
+                metainfo.write('{0},{1},DATA,{2},'.format(datatype, s,f))
 
-            for field, enc_value in meta.items(): #ENCRYPTED FIELDS
-                metainfo.write('{0}:{1} '.format(field, enc_value))
+                for field, enc_value in meta.items(): #ENCRYPTED FIELDS
+                    metainfo.write('{0}:{1} '.format(field, enc_value))
 
-            metainfo.write('\n')
-        metainfo.close()
-        zipf.write('/tmp/META.INFO', 'META.INFO')
-        zipf.close()
+                metainfo.write('\n')
+            metainfo.close()
+            zipf.write('/tmp/META.INFO', 'META.INFO')
+            zipf.close()
 
 
-        '''
-        CREATE A PACKAGE, OPEN THE ZIP FILE AND SEND IT 
-        '''
-        with open("/tmp/"+package_fname)  as zip_file:
-            encoded_string = base64.b64encode(zip_file.read())
+            '''
+            CREATE A PACKAGE, OPEN THE ZIP FILE AND SEND IT
+            '''
+            with open("/tmp/"+package_fname)  as zip_file:
+                encoded_string = base64.b64encode(zip_file.read())
 
-        pc = self.client.service.newPackageContent()
-        pc.filename = package_fname
-        pc.content = encoded_string
-        pc = self.client.service.handle_capture_upload( pc )
+            packages_to_upload.append( {'package_fname':package_fname,'encoded_string':encoded_string} )
 
-        if len(pc.id) > 0:
-            self.logger.debug("A new Subject capture has been created ("+pc.id+")")
-            msgAlert = QMessageBox.information(self, 'Carga de datos',"Se registraron exitosamente los datos del sujeto en el estudio.",QMessageBox.Ok)
-            #clear lineedits
+
+
+        successful_upload = True
+        for pkg in packages_to_upload:
+            self.logger.debug("Package uploaded: "+pkg['package_fname'])
+
+            pc = self.client.service.newPackageContent()
+            pc.filename = pkg['package_fname']
+            pc.content = pkg['encoded_string']
+            pc = self.client.service.handle_capture_upload( pc )
+
+            if len(pc.id) > 0:
+                self.logger.debug("A new Subject capture has been created ("+pc.id+")")
+                msgAlert = QMessageBox.information(self, 'Carga de datos',"Se registraron exitosamente los datos del sujeto en el estudio.",QMessageBox.Ok)
+            else:
+                successful_upload = False
+
+
+        if successful_upload:
+            #self.logger.debug("A new Subject capture has been created (" + pc.id + ")")
+            msgAlert = QMessageBox.information(self, 'Carga de datos',
+                                               "Se registraron exitosamente los datos del sujeto en el estudio.",
+                                               QMessageBox.Ok)
+            # clear lineedits
             self.lnEdtStudyId.clear()
             self.lnEdtSubjectId.clear()
-            self.lnEdtFolderPath.clear()
-        
+            self.chkIsPacient.setChecked(False)
+
+            for i in reversed(range(self.dynamicGrid.count())):
+                widget = self.dynamicGrid.takeAt(i).widget()
+                if widget is not None:
+                    widget.setParent(None)
+
+            self.inputWidgetArray = []
+
+
+            # self.lnEdtFolderPath.clear()
+
         self.btnNewSDIS.setDisabled(False)
+
+
 
     def check_subject(self):
         study_id = self.lnEdtStudyId.text().toUtf8()
@@ -650,8 +737,9 @@ class PRISMTabClient(QTabWidget):
         self.w = QWidget()
         self.w.setGeometry(QRect(100, 100, 400, 200))
         layout = QFormLayout()
-        self.w.lnEdtSID = QLabel(self.lnEdtSubjectId.text())
-        layout.addRow("ID de Sujeto anonimizado:", self.w.lnEdtSID)
+        #self.w.lnEdtSID = QLabel(self.lnEdtSubjectId.text())
+        #self.w.lnEdtSID = QLabel()
+        #layout.addRow("ID de Sujeto anonimizado:", self.w.lnEdtSID)
         self.w.bg = QButtonGroup()
         self.w.b1 = QCheckBox("M")
         self.w.b2 = QCheckBox("F")
@@ -669,20 +757,24 @@ class PRISMTabClient(QTabWidget):
         self.w.show()
         self.w.bg.buttonClicked[QAbstractButton].connect(self.btngroup)
         QObject.connect(self.w.btnSaveSubject, SIGNAL("clicked()"), self.save_subject)
+
         
     def save_subject(self):
-        self.logger.debug("SAVING...",self.w.lnEdtSID.text().toUtf8())
+        #self.logger.debug("SAVING...",self.w.lnEdtSID.text().toUtf8())
         #todo: Store to platform.
         asub = self.client.factory.create('ns0:RestAnonymizedSubject')
-        asub.SID = str(self.w.lnEdtSID.text().toUtf8())
+        #asub.SID = str(self.w.lnEdtSID.text().toUtf8())
+        asub.SID = ''
         asub.gender = str(self.w.selectedGenre)
         asub = self.client.service.handle_save_anonymizedSubject(asub)
 
+
         if len(asub.SID) > 0:
-            msgAlert = QMessageBox.information(self, 'Creacion de sujeto',"Sujeto creado exitosamente.",QMessageBox.Ok)
+            msgAlert = QMessageBox.information(self, 'Creacion de sujeto',"Sujeto creado exitosamente (SID:"+asub.SID+").",QMessageBox.Ok)
         else:
             msgAlert = QMessageBox.information(self, 'Creacion de sujeto',"Sujeto no pudo ser creado.",QMessageBox.Ok)
         self.w.close()
+        self.lnEdtSubjectId.setText(asub.SID)
 
 
     def btngroup(self,btn):
@@ -690,10 +782,12 @@ class PRISMTabClient(QTabWidget):
         self.w.selectedGenre = btn.text().toUtf8()
 
 
-    def get_folder(self):
+    def get_folder(self, index_btn=-1):
         #fname = QFileDialog.getOpenFileName(self, 'Abrir', '/',"Carpetas")
+        print "Se escogio el numero ",index_btn
         fname = str(QFileDialog.getExistingDirectory(self, "Select Directory"))
-        self.lnEdtFolderPath.setText(fname)
+        self.inputWidgetArray[index_btn]['lnEdtFolderPath'].setText(fname)
+        #self.lnEdtFolderPath.setText(fname)
 
     def switch_to_sdis_tab(self):
         self.setCurrentIndex(self.index_tab_sdis)
@@ -704,6 +798,17 @@ class PRISMTabClient(QTabWidget):
         self.tab2_lnEdtSubject.setText(sdis_subject)
         self.lnEdtSDIS.setText(sdis_id)
         self.btnSearchData.setDisabled(False)
+
+    def switch_to_loadsdis_tab(self):
+        self.setCurrentIndex(self.index_tab_load_data)
+
+        sdis_subject = str(self.listSDIS.item(self.listSDIS.currentRow(), 1).text().toUtf8())
+        self.lnEdtSubjectId.setText(sdis_subject)
+
+        id = self.lResultStudies[int(self.listStudy.currentRow())]
+        self.lnEdtStudyId.setText(id)
+
+        self.logger.debug("Sujeto son ID:" + sdis_subject + " seleccionado en estudio:"+id)
 
     def switch_to_upload_tab(self):
         self.setCurrentIndex(self.index_tab_load_data)

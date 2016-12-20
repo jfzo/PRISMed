@@ -10,7 +10,7 @@ import mongoengine as odm
 
 
 class AnonymizedSubject(odm.Document):
-    SID = odm.StringField(max_length=100,  required=True, unique=True)
+    SID = odm.StringField(max_length=100,  unique=True)
     gender = odm.StringField(max_length=50)
 
 
