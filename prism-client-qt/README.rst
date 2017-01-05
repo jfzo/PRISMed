@@ -3,6 +3,12 @@ PRISMed Qt - Client
 
 Qt client made for the PRISMed platform.
 
+Instructions
+=======================
+
+First install PyQt (see instructions below).
+Then run python setup.py install
+
 Installing PyQt in OSX
 ======================
 
