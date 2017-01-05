@@ -185,6 +185,7 @@ class PRISMTabClient(QTabWidget):
         self.cmbStudyPhySt = QComboBox()
         self.cmbStudyPhySt.addItem("cerebro".decode("UTF-8"))
         self.cmbStudyPhySt.addItem("corazón".decode("UTF-8"))
+        self.cmbStudyPhySt.addItem("columna lumbar".decode("UTF-8"))
 
         self.cmbStudyDatatype = QComboBox() # self.cb.currentText()
         self.cmbStudyDatatype.addItem("imagen".decode("UTF-8"))
