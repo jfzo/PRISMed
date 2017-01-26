@@ -608,14 +608,24 @@ class PRISMTabClient(QTabWidget):
                         #                           'PatientID':cipher.encrypt(imgObj.PatientID).replace("\n","JUMP").replace(",","COMMA").replace(" ","SPACE").replace(":","2DOTS"),
                         #                           'PatientBirthDate':cipher.encrypt(imgObj.PatientBirthDate).replace("\n","JUMP").replace(",","COMMA").replace(" ","SPACE").replace(":","2DOTS")}))
 
-                        lfiles.append((file, fsize, {'PatientName'     : base64.b64encode(cipher.encrypt(imgObj.PatientName)),
-                                                     'PatientID'       : base64.b64encode(cipher.encrypt(imgObj.PatientID)),
-                                                     'PatientBirthDate': base64.b64encode(cipher.encrypt(imgObj.PatientBirthDate))}))
+                        # check first if the fields exists !
+                        #(0010, 0010) Patient's Name
+                        #(0010, 0020) Patient ID
+                        img_patientName, img_patientID, img_patientBirthDate = '', '', ''
+                        if 'PatientBirthDate' in imgObj.dir():
+                            img_patientName = base64.b64encode(cipher.encrypt(imgObj.PatientName))
+                            imgObj.PatientName = "Anonym"  # cipher.encrypt(imgObj.PatientName)
+                        if 'PatientID' in imgObj.dir():
+                            img_patientID = base64.b64encode(cipher.encrypt(imgObj.PatientID))
+                            imgObj.PatientID = "Anonym"  # cipher.encrypt(imgObj.PatientID)
+                        if 'PatientName' in imgObj.dir():
+                            img_patientBirthDate = base64.b64encode(cipher.encrypt(imgObj.PatientBirthDate))
+                            imgObj.PatientBirthDate = "Anonym"  # cipher.encrypt(imgObj.PatientBirthDate)
 
+                        lfiles.append((file, fsize, {'PatientName'     : img_patientName,
+                                                     'PatientID'       : img_patientID,
+                                                     'PatientBirthDate': img_patientBirthDate}))
 
-                        imgObj.PatientName = "Anonym" #cipher.encrypt(imgObj.PatientName)
-                        imgObj.PatientID = "Anonym" #cipher.encrypt(imgObj.PatientID)
-                        imgObj.PatientBirthDate = "Anonym" #cipher.encrypt(imgObj.PatientBirthDate)
                         imgObj.save_as(local_temp_package + os.sep + file)
 
                     zipf.write(local_temp_package + os.sep + file, 'DATA' + os.sep + file)
