@@ -24,6 +24,7 @@ import dicom as dcm
 from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_OAEP
 
+from urllib2 import URLError
 
 
 class PRISMTabClient(QTabWidget):
@@ -141,6 +142,7 @@ class PRISMTabClient(QTabWidget):
             self.connected_ok = True
         except URLError:
             self.logger.error("Error al conectar")
+            msgAlert = QMessageBox.information(self, 'Estado de conexion', "Conexion fallida.", QMessageBox.Ok)
 
         if self.connected_ok:
             self.btnServerConnect.setDisabled(True)
@@ -149,6 +151,8 @@ class PRISMTabClient(QTabWidget):
             self.tab_search_study.setDisabled(False)
             self.tab_sdis.setDisabled(False)
             self.tab_load_data.setDisabled(False)
+            self.logger.debug("Successful connection")
+            msgAlert = QMessageBox.information(self, 'Estado de conexion', "Conexion establecida exitosamente.", QMessageBox.Ok)
 
         
     def draw_tab_connection(self):
