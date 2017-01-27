@@ -42,7 +42,7 @@ class RestStudy(object):
 
     def __repr__(self):
         return "RestStudy(%s, %s, %s, %s, %s, %s)" % (
-            self.id, self.title, self.description, self.physiological_st, self.data_type_in_study, self.modalities
+            self.id, self.title, self.date_added, self.description, self.physiological_st, self.data_type_in_study, self.modalities
         )
         
 class RestAnonymizedSubject(object):
@@ -277,7 +277,7 @@ class StudyController:
             news = RestStudy()
             news.id = str(s.id)
             news.title = s.title
-            news.date_added = s.date_added
+            news.date_added = unicode(s.date_added)
             news.description = s.description
             news.physiological_st = s.physiological_st.name
             news.data_type_in_study = s.data_type_in_study
