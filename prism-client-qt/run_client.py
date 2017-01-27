@@ -232,7 +232,7 @@ class PRISMTabClient(QTabWidget):
         layout.addRow(QLabel("Palabra clave del estudio:"),hbox)
           
         layout.addRow("Resultados :",QLabel(""))
-        header_labels = ['ID', 'Titulo', 'Estructura', 'Fecha inclusión']
+        header_labels = ['ID', 'Titulo', 'Estructura', 'Fecha inclusion']
         self.listStudy = QTableWidget(0,len(header_labels))
         self.listStudy.setHorizontalHeaderLabels(header_labels)
         self.listStudy.setEditTriggers(QAbstractItemView.NoEditTriggers)
@@ -867,6 +867,8 @@ class PRISMTabClient(QTabWidget):
             self.listSDIS.setItem(inx, 1, QTableWidgetItem(sdis.subject))
             self.listSDIS.setItem(inx, 2, QTableWidgetItem(str(sdis.is_pacient).replace("False","No").replace("True","Yes") ))
             self.listSDIS.setItem(inx, 3, QTableWidgetItem(sdis.capture_date))
+            if sdis.labels == None:
+                sdis.labels = ""
             self.listSDIS.setItem(inx, 4, QTableWidgetItem(sdis.labels))
             inx+=1
         #print self.ui.listStudy.currentItem().text()
