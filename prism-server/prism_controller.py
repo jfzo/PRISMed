@@ -34,7 +34,7 @@ class PackageContent(object):
 class RestStudy(object):
     id = unicode
     title = unicode
-    #date_added = unicode
+    date_added = unicode
     description = unicode
     physiological_st = unicode
     data_type_in_study = unicode
@@ -277,7 +277,7 @@ class StudyController:
             news = RestStudy()
             news.id = str(s.id)
             news.title = s.title
-            #news.date_added = 
+            news.date_added = s.date_added
             news.description = s.description
             news.physiological_st = s.physiological_st.name
             news.data_type_in_study = s.data_type_in_study
