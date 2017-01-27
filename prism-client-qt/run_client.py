@@ -616,13 +616,13 @@ class PRISMTabClient(QTabWidget):
                         #(0010, 0010) Patient's Name
                         #(0010, 0020) Patient ID
                         img_patientName, img_patientID, img_patientBirthDate = '', '', ''
-                        if 'PatientBirthDate' in imgObj.dir():
+                        if 'PatientName' in imgObj.dir():
                             img_patientName = base64.b64encode(cipher.encrypt(imgObj.PatientName))
                             imgObj.PatientName = "Anonym"  # cipher.encrypt(imgObj.PatientName)
                         if 'PatientID' in imgObj.dir():
                             img_patientID = base64.b64encode(cipher.encrypt(imgObj.PatientID))
                             imgObj.PatientID = "Anonym"  # cipher.encrypt(imgObj.PatientID)
-                        if 'PatientName' in imgObj.dir():
+                        if 'PatientBirthDate' in imgObj.dir():
                             img_patientBirthDate = base64.b64encode(cipher.encrypt(imgObj.PatientBirthDate))
                             imgObj.PatientBirthDate = "Anonym"  # cipher.encrypt(imgObj.PatientBirthDate)
 
